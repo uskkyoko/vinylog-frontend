@@ -12,7 +12,7 @@ CrateDigger is a modern React application built for music enthusiasts to track a
 
 ---
 
-## ⚓ Project 3: Custom Hook (`useFetch`)
+## Project 3: Custom Hook (`useFetch`)
 
 The core of the application's data layer is the `useFetch` hook. This utility abstracts the complexity of asynchronous side effects and state management into a reusable, type-safe interface.
 

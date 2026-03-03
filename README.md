@@ -40,3 +40,11 @@ To run the automated test suite, execute the following:
 npm install
 npm run test
 ```
+
+### AI usage
+
+1. Decomposition of styles
+2. Decomposition of component on the home page, etc
+3. Synchronization with the vinylog api
+4. Memory leak prevention for the custom hook
+5. Adapting existing pydantic schemas for types.ts to maintain the consistency with the api

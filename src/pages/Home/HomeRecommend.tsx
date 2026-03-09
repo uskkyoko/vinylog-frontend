@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { ButtonLink } from "../../components/Button";
 import type { UserOut } from "../../types";
 
 export function HomeRecommend({ user }: { user: UserOut | null }) {
@@ -21,12 +21,12 @@ export function HomeRecommend({ user }: { user: UserOut | null }) {
           </div>
 
           <div className="home-recommend__actions">
-            <Link className="btn btn--primary" to="/recommend">
+            <ButtonLink variant="primary" to="/recommend">
               Open AI Recommend
-            </Link>
-            <Link className="btn btn--ghost" to="/reviews/new">
+            </ButtonLink>
+            <ButtonLink variant="ghost" to="/reviews/new">
               Share a review
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </section>

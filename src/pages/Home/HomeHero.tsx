@@ -1,8 +1,8 @@
-import { Link } from "react-router-dom";
-import { StatsCard } from "../StatsCard/StatsCard";
+import { StatsCard, GuestCard } from "./StatsCard";
+import { ButtonLink } from "../../components/Button";
 import type { UserOut } from "../../types";
 
-export const HomeHero = ({ user }: { user: UserOut | null }) => {
+export function HomeHero({ user }: { user: UserOut | null }) {
   return (
     <header className="home-hero">
       <div className="container home-hero__grid">
@@ -15,22 +15,22 @@ export const HomeHero = ({ user }: { user: UserOut | null }) => {
           </p>
 
           <div className="home-hero__actions">
-            <Link className="btn btn--ghost" to="/albums">
+            <ButtonLink variant="ghost" to="/albums">
               Browse albums
-            </Link>
-            <Link className="btn btn--ghost" to="/lists">
+            </ButtonLink>
+            <ButtonLink variant="ghost" to="/lists">
               Dig lists
-            </Link>
+            </ButtonLink>
             {user && (
-              <Link className="btn btn--ai" to="/recommend">
+              <ButtonLink variant="ai" to="/recommend">
                 AI recommend
-              </Link>
+              </ButtonLink>
             )}
           </div>
         </div>
 
-        <StatsCard user={user} />
+        {user ? <StatsCard /> : <GuestCard />}
       </div>
     </header>
   );
-};
+}

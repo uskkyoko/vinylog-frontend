@@ -5,3 +5,4 @@ import { useFetch } from "./useFetch";
 export function useLists() {
   return useFetch<ListOut[]>(api.getLists, []);
 }
+

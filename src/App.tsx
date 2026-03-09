@@ -1,12 +1,18 @@
 import { Component, type ReactNode } from "react";
-import { Routes, Route } from "react-router-dom";
-import NavBar from "./components/NavBar/NavBar";
-import "./components/NavBar/NavBar.css";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home/Home";
 import Albums from "./pages/Albums/Albums";
 import Lists from "./pages/Lists/Lists";
 import Profile from "./pages/Profile/Profile";
+import Reviews from "./pages/Reviews/Reviews";
 import Settings from "./pages/Settings/Settings";
+import Login from "./pages/Login/Login";
+import Signup from "./pages/Signup/Signup";
+import AlbumDetail from "./pages/AlbumDetail/AlbumDetail";
+import ReviewDetail from "./pages/ReviewDetail/ReviewDetail";
+import Search from "./pages/Search/Search";
+import CreateReview from "./pages/CreateReview/CreateReview";
+import { useAuth } from "./context/AuthContext";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -33,23 +39,65 @@ class ErrorBoundary extends Component<
   }
 }
 
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { status } = useAuth();
+  if (status === "loading") return null;
+  if (status === "anon") return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
-    <>
-      <header className="site-header">
-        <NavBar />
-      </header>
-      <main>
-        <ErrorBoundary>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/albums" element={<Albums />} />
-            <Route path="/lists" element={<Lists />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </ErrorBoundary>
-      </main>
-    </>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/albums" element={<Albums />} />
+        <Route path="/albums/:id" element={<AlbumDetail />} />
+        <Route path="/reviews/:id" element={<ReviewDetail />} />
+        <Route path="/search" element={<Search />} />
+        <Route
+          path="/reviews/new"
+          element={
+            <ProtectedRoute>
+              <CreateReview />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/lists" element={<Lists />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute>
+              <Reviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </ErrorBoundary>
   );
 }

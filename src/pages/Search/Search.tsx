@@ -13,11 +13,11 @@ export default function Search() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
 
-  const { data: results, loading } = useSearch(query);
+  const { data: results, loading, error } = useSearch(query);
 
   const hasResults =
-    results.spotify_artists.length > 0 ||
-    results.spotify_albums.length > 0 ||
+    results.artists.length > 0 ||
+    results.albums.length > 0 ||
     results.users.length > 0 ||
     results.lists.length > 0;
 
@@ -28,10 +28,11 @@ export default function Search() {
       <section className="search-results">
         <div className="container search-results__container">
           <SearchIntro query={query} />
+          {error && <p style={{ color: "red" }}>Search error: {error}</p>}
           {hasResults ? (
             <>
-              <SearchArtistsSection artists={results.spotify_artists} />
-              <SearchAlbumsSection albums={results.spotify_albums} />
+              <SearchArtistsSection artists={results.artists} />
+              <SearchAlbumsSection albums={results.albums} />
               <SearchUsersSection users={results.users} />
               <SearchListsSection lists={results.lists} />
             </>

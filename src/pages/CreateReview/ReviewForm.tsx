@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../hooks/hooks";
-import { createReview } from "../../store/reviewsSlice";
+import { useAuth } from "../../context/AuthContext";
+import { createReview, fetchReviews } from "../../store/reviewsSlice";
 import { FormField } from "../../components/FormField";
 import { AlbumPickerField } from "../../components/AlbumPickerField/AlbumPickerField";
 import { StarRatingField } from "../../components/StarRatingField/StarRatingField";
@@ -16,6 +17,7 @@ interface Props {
 export function ReviewForm({ defaultAlbum }: Props) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [album, setAlbum] = useState<AlbumSearchResult | null>(
     defaultAlbum ?? null,
@@ -41,6 +43,7 @@ export function ReviewForm({ defaultAlbum }: Props) {
           favorite_song: favouriteTrack || null,
         }),
       );
+      if (user) await dispatch(fetchReviews(user.username));
       navigate("/reviews");
     } catch {
       setError("Could not submit review. Please try again.");

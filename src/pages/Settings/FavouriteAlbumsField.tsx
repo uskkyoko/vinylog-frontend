@@ -84,14 +84,13 @@ export function FavouriteAlbumsField({ selected, onAdd, onRemove, atMax }: Props
             <span className="settings__selected-title">
               {album.title} — {album.artist_name}
             </span>
-            <button
-              type="button"
-              className="settings__remove"
-              aria-label="Remove album"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onRemove(album.spotify_id)}
             >
               ×
-            </button>
+            </Button>
           </div>
         ))}
       </div>

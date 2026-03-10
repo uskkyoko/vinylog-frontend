@@ -2,9 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## 1. App Overview
 
-Vinylog is a music discovery and review platform. This repo is the **React + TypeScript frontend** (Vite) that talks to a FastAPI backend. `src/backend/templates/` contains Jinja2 templates kept for reference — not part of the Vite build.
+**Vinylog** is a music discovery and review platform. Users log in, write reviews for albums, curate lists, and discover music.
+
+Core entities:
+- **User** — authenticated identity; has a profile, favourite albums, followers/following
+- **Album** — music release with cover art, artist, tracklist (sourced from Spotify)
+- **Artist** — musician/band; has albums
+- **Review** — a user's rating + comment on an album
+- **List** — a user-curated collection of albums
+
+This repo is the **React + TypeScript frontend** (Vite) that talks to a FastAPI backend. `src/backend/templates/` contains Jinja2 templates kept for reference — not part of the Vite build.
 
 ## Commands
 
@@ -23,76 +32,210 @@ Run a single test file:
 npx vitest run src/hooks/useFetch.test.ts
 ```
 
-## Architecture
+## 2. State Management Approach
 
-### API Layer
+Two separate layers — chosen to keep identity concerns out of Redux and avoid unnecessary re-fetching:
+
+**`AuthContext`** (`src/context/AuthContext.tsx`) — identity only, backed by `useReducer`
+- Owns: current user object, auth token, login/signup/logout, follow/unfollow
+- Why context: auth state is global and read-only from most components; no need for Redux's action history
+- `status: 'loading' | 'authed' | 'anon'`
+
+**Redux Toolkit** (`src/store.ts` + `src/store/`) — current user's *mutable* data
+- Owns: the user's lists, reviews, favourite albums — data that must survive navigation and update reactively
+- Why Redux: multiple pages read the same lists/reviews; mutations (create/delete) must reflect everywhere instantly without re-fetching
+- Store file: `src/store.ts`
+- Typed hooks: `src/hooks/hooks.ts` → `useAppSelector`, `useAppDispatch`
+
+**`AppDataLoader`** (`src/context/AppStateContext.tsx`) — bridges auth → Redux
+- When `status` becomes `'authed'`, dispatches the three initial fetch thunks
+
+Provider nesting in `main.tsx`:
+```
+<Provider store> → <AuthProvider> → <AppDataLoader> → <BrowserRouter> → <App>
+```
+
+## 3. State Shape
+
+```ts
+// src/store.ts
+export type RootState = {
+  lists: {
+    items: ListOut[];        // current user's lists
+  };
+  reviews: {
+    items: ReviewOut[];      // current user's reviews
+  };
+  users: {
+    favouriteAlbums: AlbumOut[];  // current user's favourite albums
+  };
+};
+```
+
+Thunks per slice (`src/store/`):
+- `listsSlice`: `fetchMyLists`, `createList`, `deleteList`, `addAlbumToList`, `removeAlbumFromList`
+- `reviewsSlice`: `fetchReviews`, `createReview`, `updateReview`, `deleteReview`
+- `usersSlice`: `fetchFavouriteAlbums`, `saveFavouriteAlbums`
+
+## 4. API Conventions
 
 All backend communication lives in `src/api/`, split by domain:
 
 ```
 src/api/
-  http.ts      — shared fetch primitives: get, mutateJSON, mutateVoid, authHeaders, setAuthToken, UnauthorizedError
+  http.ts      — fetch primitives: get<T>, mutateJSON<T>, mutateVoid, authHeaders, setAuthToken, UnauthorizedError
   auth.ts      — login, signup, getMe, logout
   users.ts     — getCurrentUser, updateUser, uploadAvatar, getFavouriteAlbums, updateFavouriteAlbums, followUser, unfollowUser
-  albums.ts    — getAllAlbums, getAlbumDetails, getFeaturedAlbums, getPopularAlbums, searchAlbums
+  albums.ts    — getAllAlbums, getAlbumDetails, getFeaturedAlbums, getPopularAlbums, searchAlbums, getAlbumTracks
   artists.ts   — getArtists
   lists.ts     — getLists, getMyLists, getUserLists, createList, updateList, deleteList
   reviews.ts   — getReview, getReviews, createReview, updateReview, deleteReview
+  search.ts    — search(q)
   index.ts     — assembles all domain objects into a single `api` export
 ```
 
-Import as `import { api } from "../../api"`. All calls go to `/api/*` (Vite proxy). `setAuthToken(token)` writes a module-level variable that `authHeaders()` reads.
+**Rules:**
+- Import as `import { api } from "../../api"` — never import from individual domain files
+- All paths must include a trailing slash to avoid FastAPI 307 redirects that drop the `Authorization` header (e.g. `/reviews/` not `/reviews`)
+- `setAuthToken(token)` writes a module-level variable; `authHeaders()` injects it on every request
+- On 401, `http.ts` throws `UnauthorizedError` — `AuthContext` catches this and logs out
+- No `axios`, no TanStack Query — native `fetch` via the primitives in `http.ts`
 
-### State Management
+## 5. File Structure
 
-**`AuthContext`** (`src/context/AuthContext.tsx`) — identity layer, backed by `useReducer`
-- `status: 'loading' | 'authed' | 'anon'`
-- On mount: reads token from `localStorage`, validates via `GET /users/me`
-- Exposes: `user`, `login`, `signup`, `logout`, `updateCurrentUser`, `followUser`, `unfollowUser`
+```
+src/
+├── api/              One file per domain + http.ts primitives
+├── context/          AuthContext.tsx, AppStateContext.tsx (AppDataLoader)
+├── hooks/            useFetch.ts (primitive), domain hooks, hooks.ts (typed Redux)
+├── store/            listsSlice.ts, reviewsSlice.ts, usersSlice.ts
+├── store.ts          configureStore + RootState + AppDispatch exports
+├── types/            One file per domain, all re-exported from index.ts
+├── components/       Shared components used across 2+ pages
+│   ├── NavBar/
+│   ├── ReviewCard/
+│   ├── AlbumPickerField/
+│   ├── StarRatingField/
+│   └── Button.tsx, FormField.tsx, AppLayout.tsx, AlbumCard.tsx, ArtistCard.tsx …
+├── pages/            One folder per route
+│   ├── Home/         Home.tsx + co-located HomeHero.tsx, HomePanels.tsx …
+│   ├── Albums/
+│   ├── AlbumDetail/
+│   ├── Profile/
+│   ├── Reviews/
+│   ├── ReviewDetail/
+│   ├── CreateReview/
+│   ├── Settings/
+│   ├── Lists/
+│   ├── Search/
+│   └── Auth/         Login.tsx, Signup.tsx, Auth.css
+├── App.tsx           Route definitions + ProtectedRoute
+└── main.tsx          Provider nesting + app entry point
+```
 
-**Redux** (`src/store.ts` + `src/store/`) — current user's mutable data
-- Three slices: `listsSlice`, `reviewsSlice`, `usersSlice`
-- State shape: `state.lists.items`, `state.reviews.items`, `state.users.favouriteAlbums`
-- All async thunks (fetchMyLists, createList, deleteList, createReview, updateReview, deleteReview, saveFavouriteAlbums, etc.) live in their respective slice files
-- Use typed hooks from `src/hooks/hooks.ts`: `useAppSelector`, `useAppDispatch`
+**Naming patterns:**
+- Page shell: `PageName.tsx` (default export)
+- Co-located sub-components: `PageNameSection.tsx` / `PageNameCard.tsx` (named exports)
+- Shared components: `ComponentName.tsx` or `ComponentName/ComponentName.tsx`
+- Slices: `domainSlice.ts`, reducer export: `domainReducer`
+- Types: `src/types/domain.ts`, one interface per concept
 
-**`AppDataLoader`** (`src/context/AppStateContext.tsx`) — bridges auth → Redux
-- Watches `AuthContext` status; dispatches `fetchMyLists`, `fetchReviews`, `fetchFavouriteAlbums` when `status === 'authed'`
+## 6. Adding New Features
 
-Provider nesting in `main.tsx`: `<Provider store> > <AuthProvider> > <AppDataLoader> > <BrowserRouter> > <App>`
+Follow these steps in order when adding any new operation (e.g. "bookmark an album"):
 
-### Hook Layers
+### Step 1 — Add the type
 
-1. **`useFetch`** (`src/hooks/useFetch.ts`) — generic primitive. Returns `{ data, setData, loading, error }`. Second arg is initial value, third arg is deps array.
-2. **Domain hooks** (`useAlbums`, `useArtists`, `useLists`, `useAlbumSearch`) — thin wrappers for public/read-only data. Use for data that doesn't need to survive navigation.
-3. **Redux selectors** — use `useAppSelector` for the current user's lists, reviews, and favourite albums instead of re-fetching.
+In `src/types/<domain>.ts`, add the request/response interface:
+```ts
+export interface BookmarkCreate { album_id: number; }
+export interface BookmarkOut { id: number; album: AlbumOut; created_at: string; }
+```
+Re-export from `src/types/index.ts` if it's a new file.
 
-### Routing
+### Step 2 — Add the API function
 
-`App.tsx` defines all routes. `/albums`, `/albums/:id`, `/lists`, `/login`, `/signup` are public. All others are wrapped in `ProtectedRoute` which redirects `anon` users to `/login` and renders `null` during `loading`.
+In the relevant `src/api/<domain>.ts` file:
+```ts
+createBookmark: (data: BookmarkCreate): Promise<BookmarkOut> =>
+  mutateJSON<BookmarkOut>("/bookmarks/", "POST", data),
+deleteBookmark: (id: number): Promise<void> =>
+  mutateVoid(`/bookmarks/${id}/`, "DELETE"),
+```
+Add it to the `api` export object in `src/api/index.ts`.
 
-### Page & Component Conventions
+### Step 3 — Add a Redux slice (if data is mutable and survives navigation)
 
-**Pages contain no raw HTML** — every meaningful UI block is a named component. Structure:
-- `PageName.tsx` — thin shell: `AppLayout` + composed named sub-components + data fetching via `useFetch` or Redux selectors
-- Page-specific sub-components are **co-located** in the same page folder (e.g., `src/pages/Profile/ProfileHeader.tsx`)
-- Shared components used across multiple pages live in `src/components/`
+In `src/store/bookmarksSlice.ts`:
+```ts
+export const fetchBookmarks = createAsyncThunk("bookmarks/fetch", () => api.getBookmarks());
+export const createBookmark = createAsyncThunk("bookmarks/create", (data: BookmarkCreate) => api.createBookmark(data));
+export const deleteBookmark = createAsyncThunk("bookmarks/delete", async (id: number) => { await api.deleteBookmark(id); return id; });
 
-**Shared components:**
-- `AppLayout` — wraps NavBar + main + Footer; every page composes this itself (not at router level)
-- `Button` / `ButtonLink` — use for all buttons and link-styled buttons; variants: `primary | ghost | danger | ai`; size: `sm`. Both accept an optional `className` prop for additional styles.
-- `FormField` — label + input wrapper; use for all form fields to keep form abstraction consistent
-- `AlbumCard`, `ArtistCard`, `ReviewCard`, `ReviewDetailCard` — reusable across pages
+const bookmarksSlice = createSlice({
+  name: "bookmarks",
+  initialState: { items: [] as BookmarkOut[] },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchBookmarks.fulfilled, (state, action) => { state.items = action.payload; })
+      .addCase(createBookmark.fulfilled, (state, action) => { state.items.push(action.payload); })
+      .addCase(deleteBookmark.fulfilled, (state, action) => { state.items = state.items.filter((b) => b.id !== action.payload); });
+  },
+});
+export const bookmarksReducer = bookmarksSlice.reducer;
+```
 
-**Do not** use `className="btn btn--*"` directly on `<button>` or `<Link>` — always use `Button` / `ButtonLink` components.
+Register in `src/store.ts`:
+```ts
+import { bookmarksReducer } from "./store/bookmarksSlice";
+export const store = configureStore({ reducer: { ..., bookmarks: bookmarksReducer } });
+```
 
-### Types
+Dispatch initial fetch in `AppDataLoader` (`src/context/AppStateContext.tsx`) when `status === 'authed'`.
 
-All TypeScript interfaces live in `src/types/` (one file per domain). All re-exported from `src/types/index.ts`. Import from `"../../types"`.
+### Step 4 — Skip Redux for read-only / page-local data
 
-### Styling
+If the data doesn't need to survive navigation (e.g. album search results, public artist list), use a domain hook instead:
+```ts
+// src/hooks/useBookmarks.ts
+export function useBookmarks(userId: number) {
+  return useFetch(() => api.getBookmarks(userId), [] as BookmarkOut[], [userId]);
+}
+```
 
-Co-located `.css` files per page/component. Global base styles in `src/index.css`. `src/backend/templates/` is the visual reference for CSS class names.
+### Step 5 — Build the UI
+
+- Add a new page folder `src/pages/Bookmarks/` with `Bookmarks.tsx` (thin shell) + co-located sub-components
+- Page shell pattern:
+  ```tsx
+  export default function Bookmarks() {
+    const bookmarks = useAppSelector((state) => state.bookmarks.items);
+    return (
+      <AppLayout>
+        <BookmarksHeader />
+        <BookmarksList bookmarks={bookmarks} />
+      </AppLayout>
+    );
+  }
+  ```
+- Register the route in `App.tsx`; wrap in `<ProtectedRoute>` if auth-required
+
+### Step 6 — Verify
+
+```bash
+npm run verify   # typecheck + lint + test must all pass
+```
+
+---
+
+## Component Conventions (enforced)
+
+- **Pages contain no raw HTML** — every block is a named component
+- **All buttons** → `<Button>` or `<ButtonLink>`. Never `<button className="...">` directly
+- **All form fields** → wrapped in `<FormField label="..." htmlFor="...">`
+- **All pages** → compose `<AppLayout>` themselves (never at router level)
+- **CSS** → co-located `.css` file per page/component; global base in `src/index.css`
 
 ## Testing
 

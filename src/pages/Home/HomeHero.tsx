@@ -1,8 +1,9 @@
 import { StatsCard, GuestCard } from "./StatsCard";
 import { ButtonLink } from "../../components/Button";
-import type { UserOut } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
-export function HomeHero({ user }: { user: UserOut | null }) {
+export function HomeHero() {
+  const { user } = useAuth();
   return (
     <header className="home-hero">
       <div className="container home-hero__grid">

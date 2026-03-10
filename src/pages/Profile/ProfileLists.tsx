@@ -35,7 +35,7 @@ function ProfileListCard({ list }: { list: ListOut }) {
           <p className="profile-lists__meta">{list.description}</p>
         )}
       </div>
-      <ButtonLink to={`lists/${list.id}`} variant="ghost" size="sm">
+      <ButtonLink to={`/lists/${list.id}`} variant="ghost" size="sm">
         View
       </ButtonLink>
     </article>

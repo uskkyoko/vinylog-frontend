@@ -3,8 +3,8 @@ import { useFetch } from "./useFetch";
 import type { SearchResults } from "../types";
 
 const EMPTY: SearchResults = {
-  spotify_artists: [],
-  spotify_albums: [],
+  artists: [],
+  albums: [],
   users: [],
   lists: [],
 };

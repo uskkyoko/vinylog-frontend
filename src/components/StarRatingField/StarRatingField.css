@@ -1,0 +1,61 @@
+.star-rating {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 0.2rem;
+  width: fit-content;
+}
+
+/* Hide native radio — label + SVG handle all interaction */
+.star-rating input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.star-rating label {
+  cursor: pointer;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.star-rating label svg {
+  display: block;
+  fill: transparent;
+  stroke: currentColor;
+  transition:
+    fill 0.15s,
+    stroke 0.15s;
+}
+
+/* Selected state: highlight the checked star and all lower-numbered stars.
+   Stars are rendered 5→1 in DOM + row-reverse, so "~ label" = lower stars. */
+.star-rating label:has(input:checked),
+.star-rating label:has(input:checked) ~ label {
+  color: var(--accent);
+}
+
+.star-rating label:has(input:checked) svg,
+.star-rating label:has(input:checked) ~ label svg {
+  fill: var(--accent);
+}
+
+/* Hover preview: reset all, then highlight hovered star + lower stars */
+.star-rating:hover label {
+  color: var(--muted);
+}
+
+.star-rating:hover label svg {
+  fill: transparent;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+  color: var(--accent-alt);
+}
+
+.star-rating label:hover svg,
+.star-rating label:hover ~ label svg {
+  fill: var(--accent-alt);
+}

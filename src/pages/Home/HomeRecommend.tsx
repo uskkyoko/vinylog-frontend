@@ -1,7 +1,8 @@
 import { ButtonLink } from "../../components/Button";
-import type { UserOut } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
-export function HomeRecommend({ user }: { user: UserOut | null }) {
+export function HomeRecommend() {
+  const { user } = useAuth();
   if (!user) return null;
 
   return (

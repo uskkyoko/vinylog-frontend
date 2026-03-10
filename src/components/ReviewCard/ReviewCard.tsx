@@ -10,7 +10,9 @@ export function ReviewCard({
   username: string;
   album?: AlbumOut;
 }) {
-  const displayAlbum = album || review.album;
+  const displayAlbum = album ?? review.album;
+  if (!displayAlbum) return null;
+
   return (
     <article className="profile-reviews__card">
       <Link to={`/reviews/${review.id}`} className="profile-reviews__album">

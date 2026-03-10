@@ -23,8 +23,8 @@ export interface ListSearchResult {
 }
 
 export interface SearchResults {
-  spotify_artists: SpotifyArtistResult[];
-  spotify_albums: SpotifyAlbumResult[];
+  artists: SpotifyArtistResult[];
+  albums: SpotifyAlbumResult[];
   users: UserSearchResult[];
   lists: ListSearchResult[];
 }

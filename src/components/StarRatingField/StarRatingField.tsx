@@ -1,3 +1,5 @@
+import "./StarRatingField.css";
+
 const STARS = [5, 4, 3, 2, 1] as const;
 
 interface Props {
@@ -24,7 +26,7 @@ export function StarRatingField({ value, onChange }: Props) {
             height="24"
             stroke="currentColor"
             strokeWidth="2"
-            fill="none"
+            fill="transparent"
             strokeLinecap="round"
             strokeLinejoin="round"
           >

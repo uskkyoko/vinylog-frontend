@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { ErrorFallback } from "./components/ErrorFallback";
 import Home from "./pages/Home/Home";
 import Albums from "./pages/Albums/Albums";
 import Lists from "./pages/Lists/Lists";
@@ -9,9 +10,16 @@ import Settings from "./pages/Settings/Settings";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import AlbumDetail from "./pages/AlbumDetail/AlbumDetail";
+import ArtistDetail from "./pages/ArtistDetail/ArtistDetail";
 import ReviewDetail from "./pages/ReviewDetail/ReviewDetail";
 import Search from "./pages/Search/Search";
 import CreateReview from "./pages/CreateReview/CreateReview";
+import EditReview from "./pages/EditReview/EditReview";
+import CreateList from "./pages/Lists/CreateList";
+import EditList from "./pages/Lists/EditList";
+import ListDetail from "./pages/Lists/ListDetail";
+import Recommend from "./pages/Recommend/Recommend";
+import About from "./pages/About/About";
 import { useAuth } from "./context/AuthContext";
 
 class ErrorBoundary extends Component<
@@ -26,14 +34,7 @@ class ErrorBoundary extends Component<
 
   render() {
     if (this.state.error) {
-      return (
-        <div style={{ padding: "2rem", fontFamily: "monospace" }}>
-          <h2>Render error</h2>
-          <pre style={{ color: "red" }}>
-            {(this.state.error as Error).message}
-          </pre>
-        </div>
-      );
+      return <ErrorFallback message={(this.state.error as Error).message} />;
     }
     return this.props.children;
   }
@@ -44,6 +45,13 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   if (status === "loading") return null;
   if (status === "anon") return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function ProfileRedirect() {
+  const { user, status } = useAuth();
+  if (status === "loading") return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={`/profile/${user.username}`} replace />;
 }
 
 export default function App() {
@@ -62,7 +70,23 @@ export default function App() {
         />
         <Route path="/albums" element={<Albums />} />
         <Route path="/albums/:id" element={<AlbumDetail />} />
-        <Route path="/reviews/:id" element={<ReviewDetail />} />
+        <Route path="/artists/:id" element={<ArtistDetail />} />
+        <Route
+          path="/reviews/:id"
+          element={
+            <ProtectedRoute>
+              <ReviewDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditReview />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/search" element={<Search />} />
         <Route
           path="/reviews/new"
@@ -72,12 +96,23 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/profile" element={<ProfileRedirect />} />
+        <Route path="/profile/:username" element={<Profile />} />
         <Route path="/lists" element={<Lists />} />
+        <Route path="/lists/:id" element={<ListDetail />} />
         <Route
-          path="/profile"
+          path="/lists/new"
           element={
             <ProtectedRoute>
-              <Profile />
+              <CreateList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lists/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditList />
             </ProtectedRoute>
           }
         />
@@ -97,6 +132,15 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/recommend"
+          element={
+            <ProtectedRoute>
+              <Recommend />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/about" element={<About />} />
       </Routes>
     </ErrorBoundary>
   );

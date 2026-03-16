@@ -2,9 +2,9 @@ import type { UserOut } from "../types";
 import { api } from "../api";
 import { useFetch } from "./useFetch";
 
-export function usePublicUser(username: string) {
+export function usePublicUser(username: string | null) {
   return useFetch<UserOut | null>(
-    () => api.getCurrentUser(username),
+    () => (username ? api.getCurrentUser(username) : Promise.resolve(null)),
     null,
     [username],
   );

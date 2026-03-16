@@ -18,19 +18,21 @@ export function AlbumDetailHero({ album }: { album: AlbumOut }) {
         )}
       </div>
       <div className="album-detail__info">
-        <p className="eyebrow">{album.artist.name}</p>
+        <p className="eyebrow">{album.artist?.name}</p>
         <h1 className="album-detail__title">{album.title}</h1>
         {releaseYear && <p className="album-detail__year">{releaseYear}</p>}
+        {album.artist && (
+          <ButtonLink
+            to={`/artists/${album.artist.id}`}
+            variant="ghost"
+            size="sm"
+            className="album-detail__artist-link"
+          >
+            View artist
+          </ButtonLink>
+        )}
         <ButtonLink
-          to={`/artists/${album.artist.id}`}
-          variant="ghost"
-          size="sm"
-          className="album-detail__artist-link"
-        >
-          View artist
-        </ButtonLink>
-        <ButtonLink
-          to={`/reviews/new?album_id=${album.spotify_id}&album_title=${encodeURIComponent(album.title)}&artist=${encodeURIComponent(album.artist.name)}&image=${encodeURIComponent(album.cover_url ?? "")}`}
+          to={`/reviews/new?album_id=${album.spotify_id}&album_title=${encodeURIComponent(album.title)}&artist=${encodeURIComponent(album.artist?.name ?? "")}&image=${encodeURIComponent(album.cover_url ?? "")}`}
           variant="primary"
           size="sm"
         >

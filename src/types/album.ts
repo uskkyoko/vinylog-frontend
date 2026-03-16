@@ -36,7 +36,35 @@ export interface AlbumOut {
   release_date: string;
   cover_url: string | null;
   archived: boolean;
-  artist: ArtistOut;
+  artist: ArtistOut | null;
   favoured_by_users: UserOut[];
   reviews: ReviewOut[];
+}
+
+/** Lightweight album shape returned by /albums/trending and similar list endpoints */
+export interface TrendingAlbumOut {
+  spotify_id: string;
+  title: string;
+  artist_name: string;
+  cover_url: string | null;
+  release_date: string;
+}
+
+/** Response from /albums/spotify/{spotify_id} — resolves or creates an album and returns its DB id */
+export interface SpotifyAlbumLookup {
+  id: number;
+  title: string;
+  spotify_id: string;
+  cover_url: string | null;
+  release_date: string;
+}
+
+/** Minimum shape accepted by AlbumCard — satisfied by both AlbumOut and TrendingAlbumOut */
+export interface AlbumCardData {
+  id?: number | null;
+  spotify_id: string;
+  title: string;
+  artist?: ArtistOut | null;
+  artist_name?: string | null;
+  cover_url: string | null;
 }

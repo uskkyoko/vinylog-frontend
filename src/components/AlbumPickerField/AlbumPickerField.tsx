@@ -10,7 +10,7 @@ interface Props {
 
 export function AlbumPickerField({ value, onChange }: Props) {
   const [query, setQuery] = useState("");
-  const results = useAlbumSearch(query);
+  const { results } = useAlbumSearch(query);
 
   function selectAlbum(album: AlbumSearchResult) {
     onChange(album);

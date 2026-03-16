@@ -2,6 +2,12 @@ import type { AlbumOut } from "./album";
 import type { ReviewOut } from "./review";
 import type { ListOut } from "./list";
 
+export interface UserSummary {
+  id: number;
+  username: string;
+  profile_picture: string | null;
+}
+
 export interface UserUpdate {
   full_name?: string | null;
   biography?: string | null;
@@ -28,8 +34,11 @@ export interface UserOut {
   favourite_albums: AlbumOut[];
   followers: UserOut[];
   following: UserOut[];
+  followers_count?: number;
+  following_count?: number;
   reviews: ReviewOut[];
   lists: ListOut[];
+  is_following: boolean;
 }
 
 export interface AdminUserOut extends UserOut {

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { UserSearchResult } from "../../types";
+import { SearchResultsSection } from "./SearchResultsSection";
 
 function SearchUserCard({ user }: { user: UserSearchResult }) {
   return (
@@ -28,13 +29,10 @@ function SearchUserCard({ user }: { user: UserSearchResult }) {
 export function SearchUsersSection({ users }: { users: UserSearchResult[] }) {
   if (users.length === 0) return null;
   return (
-    <section className="search-results__section">
-      <h2 className="search-results__section-title">Community Members</h2>
-      <div className="grid grid--four">
-        {users.map((user) => (
-          <SearchUserCard key={user.username} user={user} />
-        ))}
-      </div>
-    </section>
+    <SearchResultsSection title="Community Members">
+      {users.map((user) => (
+        <SearchUserCard key={user.username} user={user} />
+      ))}
+    </SearchResultsSection>
   );
 }

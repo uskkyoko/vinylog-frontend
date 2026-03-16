@@ -247,6 +247,149 @@
   color: var(--muted);
 }
 
+/* Clickable stats */
+.stats__btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: inherit;
+}
+
+.stats__btn:hover span {
+  text-decoration: underline;
+}
+
+/* Follow modal */
+.follow-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.follow-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 540px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 1rem;
+}
+
+.follow-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.follow-modal__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.follow-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem;
+}
+
+.follow-modal__close:hover {
+  color: var(--color-text-primary);
+}
+
+.follow-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.follow-modal__empty {
+  padding: 1.5rem 1.25rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.follow-modal__item {
+  border-bottom: 1px solid var(--border);
+}
+
+.follow-modal__item:last-child {
+  border-bottom: none;
+}
+
+.follow-modal__user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.follow-modal__user:hover {
+  background: var(--surface-alt);
+}
+
+.follow-modal__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.follow-modal__avatar--placeholder {
+  background: var(--color-surface-2, var(--surface-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.follow-modal__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.follow-modal__name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.follow-modal__username {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 @media (max-width: 768px) {
   .profile__favorites-grid {
     grid-template-columns: repeat(3, 1fr);

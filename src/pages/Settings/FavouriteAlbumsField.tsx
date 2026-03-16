@@ -21,7 +21,7 @@ interface Props {
 
 export function FavouriteAlbumsField({ selected, onAdd, onRemove, atMax }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
-  const searchResults = useAlbumSearch(searchQuery);
+  const { results: searchResults } = useAlbumSearch(searchQuery);
 
   return (
     <div className="settings__favourites">

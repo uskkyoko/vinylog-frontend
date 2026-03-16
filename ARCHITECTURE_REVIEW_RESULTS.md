@@ -1,161 +1,171 @@
 # Architecture Review Results
 
-> Analyzed on: 2026-03-10
-> Project: vinylog-frontend
-> Total components analyzed: 53
+> Analyzed on: 2026-03-16
+> Project: Vinylog Frontend (`src/`)
+> Total components analyzed: 46
 > Issues found: 3
 
 ## Summary
 
-The architecture is in excellent shape — the prop-drilling fix in `Home.tsx` from the previous review is confirmed resolved, Redux slices are clean, the `AppDataLoader` bridge is minimal, and every page correctly composes `AppLayout` itself. Three small issues remain: one is a direct violation of the project's own `Button` convention in `FavouriteAlbumsField`; one is a navigational bug in `ProfileListCard` (relative vs absolute path); and one is a mild SLA leak in `Reviews.tsx` where inline page-header markup was not extracted into a named component.
+Vinylog has a mature, deliberately designed frontend architecture. The dual-state split (AuthContext for identity, Redux for mutable user data), the `useFetch`-based domain hook layer, and the API abstraction in `src/api/` are all well-executed and consistently applied across the codebase. Three issues stand out: `Profile.tsx` performs a raw API call to refresh state after follow/unfollow where the context already owns that responsibility; `ArtistDetail.tsx` implements a three-step async load inline with `useState`/`useEffect` while every other page uses `useFetch`; and `ListForm.tsx` embeds two named sub-components in its own file where the project convention calls for co-located separate files.
 
 ---
 
 ## Issues
 
-### ISSUE-01: `FavouriteAlbumsField` uses a raw `<button>` for the remove action
+### ARCH-01: Profile refreshes follow state with a raw API call instead of updating through context
 
-**Severity**: Low
-**Principle**: SLA Violation
-**Location**: `src/pages/Settings/FavouriteAlbumsField.tsx:87`
+**Severity**: High
+**Principle**: Unclear Data Flow
+**Location**: `src/pages/Profile/Profile.tsx` (lines 28–38)
 
-The remove `×` button is a raw `<button type="button" className="settings__remove">` instead of the project's `Button` component. CLAUDE.md explicitly states: *"Do not use `className="btn btn--*"` directly on `<button>` — always use `Button` / `ButtonLink` components."* Every other interactive element in the project uses `Button`; this one is inconsistent and will drift further from the design system if copied.
-
-#### Current (Bad)
-
-```tsx
-<button
-  type="button"
-  className="settings__remove"
-  aria-label="Remove album"
-  onClick={() => onRemove(album.spotify_id)}
->
-  ×
-</button>
-```
-
-#### Recommended (Good)
-
-```tsx
-<Button
-  variant="ghost"
-  size="sm"
-  onClick={() => onRemove(album.spotify_id)}
->
-  ×
-</Button>
-```
-
-**Why this is better**: One calling convention for all interactive elements — consistent with every other removal action in the codebase (`AlbumPickerField`, `SettingsForm`).
-
----
-
-### ISSUE-02: `ProfileListCard` navigates with a relative path
-
-**Severity**: Low
-**Principle**: Poor Component API
-**Location**: `src/pages/Profile/ProfileLists.tsx:38`
-
-The "View" link uses `to={\`lists/${list.id}\`}` (no leading slash). React Router treats this as a relative path, so from `/profile` it navigates to `/profile/lists/123` instead of `/lists/123`. Every other list link in the project (`ListCard`, `HomeListItem`, `SearchListsSection`) correctly uses `/lists/${id}`.
+After calling `followUser()` or `unfollowUser()` (context methods that already make the API request), `Profile.tsx` fires a second `api.getCurrentUser()` call to refresh the displayed user. This is a manual cache-bust that bypasses the state layer — errors in the refresh are silently swallowed, there is no loading feedback, and the pattern means `Profile.tsx` knows *how* follow updates the profile rather than just *that* it happened.
 
 #### Current (Bad)
 
 ```tsx
-<ButtonLink to={`lists/${list.id}`} variant="ghost" size="sm">
-  View
-</ButtonLink>
-```
+// Profile.tsx
+async function handleFollow() {
+  await followUser(username!);
+  const fresh = await api.getCurrentUser(username!); // raw refresh, no error handling
+  setPublicUser(fresh);
+}
 
-#### Recommended (Good)
-
-```tsx
-<ButtonLink to={`/lists/${list.id}`} variant="ghost" size="sm">
-  View
-</ButtonLink>
-```
-
-**Why this is better**: Absolute path navigates correctly from any route, matching every other list link in the app.
-
----
-
-### ISSUE-03: `Reviews.tsx` contains inline page-header markup
-
-**Severity**: Low
-**Principle**: SLA Violation
-**Location**: `src/pages/Reviews/Reviews.tsx`
-
-The page renders its header block inline — raw `<header>`, `<div>`, `<p>`, `<h1>`, and `<ButtonLink>` — rather than composing a named component. Compare `ProfileReviews.tsx`, which handles a structurally identical section as a self-contained named component. `Reviews.tsx` as a page should be a thin composition; instead it mixes layout markup with its data-fetching and rendering logic.
-
-#### Current (Bad)
-
-```tsx
-export default function Reviews() {
-  // ...
-  return (
-    <AppLayout>
-      <section className="profile">
-        <div className="container">
-          <header className="profile-section__header">  {/* raw markup */}
-            <div>
-              <p className="eyebrow">Activity</p>
-              <h1 className="profile-section__title">All Reviews</h1>
-            </div>
-            <ButtonLink to="/profile" variant="ghost" size="sm">Back to profile</ButtonLink>
-          </header>
-          <div className="profile-reviews">
-            {reviews.map((review) => <ReviewCard ... />)}
-          </div>
-        </div>
-      </section>
-    </AppLayout>
-  );
+async function handleUnfollow() {
+  await unfollowUser(username!);
+  const fresh = await api.getCurrentUser(username!); // duplicated pattern
+  setPublicUser(fresh);
 }
 ```
 
 #### Recommended (Good)
 
+Move the refresh into `useProfileData` by accepting an explicit `refresh` callback, or return a `refresh` function from the hook so the page stays at the right abstraction level:
+
 ```tsx
-// Reviews.tsx — thin shell
-export default function Reviews() {
-  const reviews = useAppSelector((state) => state.reviews.items);
-  if (!user) return null;
-  return (
-    <AppLayout>
-      <section className="profile">
-        <div className="container">
-          <ReviewsHeader />
-          <ReviewsList reviews={reviews} username={user.username} />
-        </div>
-      </section>
-    </AppLayout>
-  );
+// hooks/useProfileData.ts — add a refresh function
+export function useProfileData(username: string) {
+  // ... existing state
+  async function refresh() {
+    const fresh = await api.getCurrentUser(username);
+    setPublicUser(fresh);
+  }
+  return { ..., refresh };
+}
+
+// Profile.tsx — page knows nothing about the API call
+async function handleFollow() {
+  await followUser(username!);
+  await refresh();
+}
+
+async function handleUnfollow() {
+  await unfollowUser(username!);
+  await refresh();
 }
 ```
 
-**Why this is better**: The page is now describable in one sentence using only component names; the header and list are independently readable and reusable.
+**Why this is better**: `Profile.tsx` stays at the page abstraction level — it calls intent-named methods and the mechanics of how state is refreshed live in the hook where they belong. Adding error handling or optimistic updates only requires changing one place.
 
 ---
 
-## Components confirmed clean
+### ARCH-02: ArtistDetail implements a three-step async load inline instead of using a custom hook
 
-All 53 components were read and checked. Notable highlights:
+**Severity**: Medium
+**Principle**: SLA Violation
+**Location**: `src/pages/ArtistDetail/ArtistDetail.tsx` (lines 18–49)
 
-- **`Home.tsx`** — No longer imports `useAuth` or passes `user` as a prop; now purely composes data-fetching hooks and layout. ISSUE-02 from the previous review fully resolved.
-- **`HomeHero.tsx` / `HomeRecommend.tsx`** — Each now calls `useAuth()` directly; no prop drilling. Clean.
-- **`NavBar.tsx`** — `<li>` wrappers confirmed present. ISSUE-03 from the previous review confirmed resolved.
-- **`ReviewForm.tsx`** — Clean three-field form; `AlbumPickerField`, `StarRatingField`, `FavouriteTrackField` each at consistent abstraction level.
-- **`AlbumPickerField.tsx`** — Clean single-select pattern; selected state renders as a pill, unselected state renders search. Two branches are structurally consistent.
-- **`FavouriteAlbumsField.tsx`** — Clean multi-select pattern; only the raw `<button>` (ISSUE-01 above) breaks the convention.
-- **`SettingsForm.tsx`** — All five fields use `FormField`; `AvatarUpload` and `FavouriteAlbumsField` correctly extracted as sub-components. Clean.
-- **`StatsCard.tsx`** — Reads Redux state directly; no prop drilling. Correct.
-- **`AlbumDetailHero.tsx`** — Clean two-button layout; "Write a review" pre-fill link is well-constructed.
-- **`AlbumDetailReviews.tsx`** — Passes `album` explicitly to `ReviewCard`; consistent with the current `ReviewCard` API (ISSUE-01 from the previous review — backend fix still pending).
-- **`ReviewDetail.tsx`** — `useFetch` for local data, `dispatch(deleteReview)` for mutation. Correct layer separation.
-- **`Search.tsx`** — Each section (`SearchArtistsSection`, `SearchAlbumsSection`, etc.) returns `null` when empty; page shell stays clean.
-- **`ListCard.tsx`** — `AlbumPreviews` correctly scoped as a private sub-component; `ListCard` is describable in one sentence.
-- **`ProfileHeader.tsx`** — `FavouriteAlbums` correctly scoped as a private sub-component.
-- **`AppDataLoader`** — Minimal bridge; dispatches exactly three thunks on auth change and nothing else.
-- **`listsSlice` / `reviewsSlice` / `usersSlice`** — Thunks cleanly derive all payload from arguments; no `getState()` misuse.
+Every other detail page in the project (`AlbumDetail`, `ReviewDetail`, `ListDetail`, `Profile`) uses either `useFetch` or a domain hook to keep data-fetching out of the component body. `ArtistDetail` breaks this pattern with a 30-line `useEffect` that manually manages three sequential API calls, three state variables (`artist`, `loading`, `error`), and a cleanup flag — all of which `useFetch` already handles. A reader familiar with the rest of the codebase has to context-switch when they open this file.
+
+#### Current (Bad)
+
+```tsx
+// ArtistDetail.tsx — 30 lines of async orchestration in the component
+const [artist, setArtist] = useState<ArtistDetails | null>(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState(false);
+
+useEffect(() => {
+  let isMounted = true;
+  setLoading(true);
+  async function load() {
+    try {
+      const initial = await api.getArtistsDetails(artistId);
+      if (initial.spotify_id && initial.albums.length === 0) {
+        await api.getSpotifyArtist(initial.spotify_id).catch(() => {});
+        const synced = await api.getArtistsDetails(artistId);
+        if (isMounted) setArtist(synced);
+      } else {
+        if (isMounted) setArtist(initial);
+      }
+    } catch { if (isMounted) setError(true); }
+    finally { if (isMounted) setLoading(false); }
+  }
+  load();
+  return () => { isMounted = false; };
+}, [artistId]);
+```
+
+#### Recommended (Good)
+
+```tsx
+// hooks/useArtistDetail.ts — encapsulates the Spotify sync logic
+export function useArtistDetail(artistId: number) {
+  return useFetch<ArtistDetails | null>(
+    async () => {
+      const initial = await api.getArtistsDetails(artistId);
+      if (initial.spotify_id && initial.albums.length === 0) {
+        await api.getSpotifyArtist(initial.spotify_id).catch(() => {});
+        return api.getArtistsDetails(artistId);
+      }
+      return initial;
+    },
+    null,
+    [artistId],
+  );
+}
+
+// ArtistDetail.tsx — back to the standard page pattern
+const { data: artist, loading, error } = useArtistDetail(artistId);
+```
+
+**Why this is better**: The page component is back to one line of data fetching — consistent with every other detail page in the project. The Spotify sync logic lives in a named hook that can be tested independently and updated without touching the page.
+
+---
+
+### ARCH-03: ListForm defines two sub-components inline rather than as co-located files
+
+**Severity**: Low
+**Principle**: SLA Violation
+**Location**: `src/pages/Lists/ListForm.tsx` (lines 27–102)
+
+`ListForm.tsx` is 287 lines. The first 100 lines define `SearchResultItem` and `SelectedAlbumItem` — two fully independent, named presentational components — before the `ListForm` function begins. The project convention (stated in `CLAUDE.md` and followed everywhere else) is: co-located sub-components go in their own file. Having three components in one file makes the file harder to scan and obscures that `ListForm` is actually a composition of named sub-components.
+
+#### Current (Bad)
+
+```tsx
+// ListForm.tsx — 287 lines, three components in one file
+function SearchResultItem({ album, alreadyAdded, onAdd }) { /* 35 lines */ }
+function SelectedAlbumItem({ album, onRemove }) { /* 38 lines */ }
+export function ListForm({ list }: Props) { /* 185 lines */ }
+```
+
+#### Recommended (Good)
+
+```
+src/pages/Lists/
+  ListForm.tsx          ← only ListForm (now ~185 lines)
+  SearchResultItem.tsx  ← named export, its own file
+  SelectedAlbumItem.tsx ← named export, its own file
+```
+
+```tsx
+// ListForm.tsx — imports instead of embedding
+import { SearchResultItem } from "./SearchResultItem";
+import { SelectedAlbumItem } from "./SelectedAlbumItem";
+```
+
+**Why this is better**: `ListForm.tsx` now reads as a form that *composes* album-picker sub-components rather than *defining* them. Consistent with how every other page in the project organizes its co-located components.
 
 ---
 
@@ -163,9 +173,9 @@ All 53 components were read and checked. Notable highlights:
 
 | Priority | Issue | Effort | Impact |
 |----------|-------|--------|--------|
-| 1 | ISSUE-02: Fix relative path in `ProfileListCard` | Low | Medium (navigational bug) |
-| 2 | ISSUE-01: Replace raw `<button>` with `Button` in `FavouriteAlbumsField` | Low | Low |
-| 3 | ISSUE-03: Extract `ReviewsHeader` + `ReviewsList` from `Reviews.tsx` | Low | Low |
+| 1 | ARCH-01: Follow refresh bypasses state layer | Low | High |
+| 2 | ARCH-02: ArtistDetail async load should be a hook | Low | Medium |
+| 3 | ARCH-03: Extract ListForm sub-components to own files | Very Low | Low |
 
 ---
 
@@ -173,11 +183,11 @@ All 53 components were read and checked. Notable highlights:
 
 | Criterion | Score (1–5) | Notes |
 |-----------|-------------|-------|
-| Single Level of Abstraction | 4 | `Reviews.tsx` inline header and raw `<button>` in `FavouriteAlbumsField` are the only breaches; all other components are clean |
-| Component API Design | 5 | Props are minimal and well-typed throughout; callbacks expose the right level of detail |
-| Data Flow Clarity | 5 | Auth → Redux → components layering is consistent; no prop drilling remains after ISSUE-02 fix |
-| API Abstraction Layer | 5 | `src/api/` domain split is solid; `http.ts` owns all fetch primitives; no direct `fetch` calls in hooks or components |
-| App Layout / Shell | 5 | `AppLayout`-inside-page correctly applied on every route |
-| Code Duplication | 4 | `AlbumPickerField` and `FavouriteAlbumsField` share structural search-and-select logic; acceptable given different selection semantics (single vs multi), but worth noting |
-| Composition Patterns | 5 | Private sub-components correctly scoped; `children` used well in `HomePanel`; Redux slices are clean |
-| **Overall** | **4.7** | Excellent architecture — two of the three issues are one-liners; the codebase is in a strong, maintainable state |
+| Single Level of Abstraction | 4 | Pages and components are clean; ArtistDetail and ListForm are the exceptions |
+| Component API Design | 5 | Props are minimal and well-typed throughout; `Button`, `FormField`, `AlbumPickerField` set a good standard |
+| Data Flow Clarity | 4 | Dual-state split is excellent; Profile's manual API refresh is the one inconsistency |
+| API Abstraction Layer | 5 | Domain objects + `http.ts` primitives + single `api` export is exactly right for this project size |
+| App Layout / Shell | 5 | Every page composes `<AppLayout>` itself — correct pattern, no router-level wrapper |
+| Code Duplication | 4 | Form error display (`auth__error`) repeated across forms; minor |
+| Composition Patterns | 5 | `useFetch` + domain hooks + Redux thunks compose cleanly; `AppDataLoader` bridge is well-designed |
+| **Overall** | **4.6** | Solid, production-quality architecture with three focused, low-effort fixes remaining |

@@ -4,6 +4,7 @@ import "./Auth.css";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/Button";
 import { FormField } from "../../components/FormField";
+import { FormError } from "../../components/FormError";
 
 export default function Login() {
   const { login } = useAuth();
@@ -64,7 +65,7 @@ export default function Login() {
             {loading ? "Logging in…" : "Log In"}
           </Button>
         </form>
-        {error && <p className="auth__error">{error}</p>}
+        <FormError message={error} />
         <p className="auth__alt">
           No account?{" "}
           <Link to="/signup" className="auth__link">

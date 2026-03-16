@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { ListSearchResult } from "../../types";
+import { SearchResultsSection } from "./SearchResultsSection";
 
 function SearchListCard({ list }: { list: ListSearchResult }) {
   return (
@@ -17,13 +18,10 @@ function SearchListCard({ list }: { list: ListSearchResult }) {
 export function SearchListsSection({ lists }: { lists: ListSearchResult[] }) {
   if (lists.length === 0) return null;
   return (
-    <section className="search-results__section">
-      <h2 className="search-results__section-title">Curated Lists</h2>
-      <div className="grid grid--three">
-        {lists.map((list) => (
-          <SearchListCard key={list.id} list={list} />
-        ))}
-      </div>
-    </section>
+    <SearchResultsSection title="Curated Lists" gridClass="grid--three">
+      {lists.map((list) => (
+        <SearchListCard key={list.id} list={list} />
+      ))}
+    </SearchResultsSection>
   );
 }

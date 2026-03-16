@@ -1,4 +1,5 @@
 import type { SpotifyAlbumResult } from "../../types";
+import { SearchResultsSection } from "./SearchResultsSection";
 
 function SearchAlbumCard({ album }: { album: SpotifyAlbumResult }) {
   return (
@@ -30,13 +31,10 @@ export function SearchAlbumsSection({
 }) {
   if (albums.length === 0) return null;
   return (
-    <section className="search-results__section">
-      <h2 className="search-results__section-title">Albums</h2>
-      <div className="grid grid--four">
-        {albums.map((album) => (
-          <SearchAlbumCard key={album.spotify_id} album={album} />
-        ))}
-      </div>
-    </section>
+    <SearchResultsSection title="Albums">
+      {albums.map((album) => (
+        <SearchAlbumCard key={album.spotify_id} album={album} />
+      ))}
+    </SearchResultsSection>
   );
 }

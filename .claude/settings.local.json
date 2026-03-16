@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:/Uliana/auk/SDT 210 Declarative Frontend/vinylog-frontend\" && npm run typecheck)"
+    ]
+  }
+}

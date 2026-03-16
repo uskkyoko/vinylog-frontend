@@ -195,6 +195,36 @@
   justify-content: flex-end;
 }
 
+.review-form__album-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface-alt);
+}
+
+.review-form__album-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.review-form__album-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.review-form__album-artist {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 .review-form__track-field {
   margin-top: 1rem;
 }

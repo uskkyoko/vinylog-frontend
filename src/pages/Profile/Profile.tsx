@@ -1,27 +1,73 @@
+import { useParams } from "react-router-dom";
 import "./Profile.css";
 import { AppLayout } from "../../components/AppLayout";
+import { PageLoading } from "../../components/PageLoading";
 import { useAuth } from "../../context/AuthContext";
-import { useAppSelector } from "../../hooks/hooks";
+import { useProfileData } from "../../hooks/useProfileData";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfileLists } from "./ProfileLists";
 import { ProfileReviews } from "./ProfileReviews";
 
 export default function Profile() {
-  const { user } = useAuth();
-  const lists = useAppSelector((state) => state.lists.items);
-  const reviews = useAppSelector((state) => state.reviews.items);
-  const favouriteAlbums = useAppSelector((state) => state.users.favouriteAlbums);
+  const { username } = useParams<{ username: string }>();
+  const { user: currentUser, status: authStatus, followUser, unfollowUser } = useAuth();
 
-  if (!user) return null;
+  const {
+    isOwner,
+    profileUser,
+    lists,
+    reviews,
+    favAlbums,
+    isFollowing,
+    loading,
+    error,
+    refresh,
+  } = useProfileData(username!);
+
+  async function handleFollow() {
+    await followUser(username!);
+    await refresh();
+  }
+
+  async function handleUnfollow() {
+    await unfollowUser(username!);
+    await refresh();
+  }
+
+  if (authStatus === "loading") return <PageLoading />;
+  if (isOwner && !currentUser) return null;
+  if (!isOwner && loading) return <PageLoading />;
+  if (!isOwner && (error || !profileUser)) {
+    return (
+      <AppLayout>
+        <section className="profile">
+          <div className="container">
+            <p>User not found.</p>
+          </div>
+        </section>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <section className="profile">
         <div className="container">
-          <ProfileHeader user={user} favouriteAlbums={favouriteAlbums} />
+          <ProfileHeader
+            user={profileUser!}
+            favouriteAlbums={favAlbums}
+            isOwner={isOwner}
+            isFollowing={isFollowing}
+            onFollow={!isOwner && currentUser ? handleFollow : undefined}
+            onUnfollow={!isOwner && currentUser ? handleUnfollow : undefined}
+          />
           <div className="profile__sections">
-            <ProfileLists lists={lists} />
-            <ProfileReviews reviews={reviews} username={user.username} />
+            <ProfileLists lists={lists} isOwner={isOwner} />
+            <ProfileReviews
+              reviews={reviews}
+              username={profileUser!.username}
+              isOwner={isOwner}
+            />
           </div>
         </div>
       </section>

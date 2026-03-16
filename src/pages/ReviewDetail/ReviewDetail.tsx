@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "../../components/AppLayout";
-import { ButtonLink } from "../../components/Button";
 import { ReviewDetailCard } from "../../components/ReviewCard/ReviewDetailCard";
 import { PageLoading } from "../../components/PageLoading";
 import { useAuth } from "../../context/AuthContext";
@@ -8,7 +7,8 @@ import { useAppDispatch } from "../../hooks/hooks";
 import { deleteReview } from "../../store/reviewsSlice";
 import { useFetch } from "../../hooks/useFetch";
 import { api } from "../../api";
-import "../Review.css";
+import { ReviewDetailHeader } from "./ReviewDetailHeader";
+import "../Reviews/Review.css";
 
 export default function ReviewDetail() {
   const { id } = useParams<{ id: string }>();
@@ -41,21 +41,13 @@ export default function ReviewDetail() {
     );
   }
 
-  const isOwner = user?.id === review.user_id;
+  const isOwner = user?.id === review.user?.id;
 
   return (
     <AppLayout>
       <section className="review-detail">
         <div className="container">
-          <header className="profile-section__header">
-            <div>
-              <p className="eyebrow">Review</p>
-              <h1 className="profile-section__title">{review.album.title}</h1>
-            </div>
-            <ButtonLink to="/reviews" variant="ghost" size="sm">
-              All reviews
-            </ButtonLink>
-          </header>
+          <ReviewDetailHeader albumTitle={review.album.title} />
           <ReviewDetailCard
             review={review}
             isOwner={isOwner}

@@ -16,7 +16,6 @@ export interface ReviewUpdate {
 
 export interface ReviewOut {
   id: number;
-  user_id: number; //added
   rating: number;
   comment: string | null;
   favorite_song: string | null;

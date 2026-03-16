@@ -9,16 +9,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Core entities:
 - **User** — authenticated identity; has a profile, favourite albums, followers/following
 - **Album** — music release with cover art, artist, tracklist (sourced from Spotify)
-- **Artist** — musician/band; has albums
+- **Artist** — musician/band; has albums synced from Spotify on first visit
 - **Review** — a user's rating + comment on an album
 - **List** — a user-curated collection of albums
 
-This repo is the **React + TypeScript frontend** (Vite) that talks to a FastAPI backend. `src/backend/templates/` contains Jinja2 templates kept for reference — not part of the Vite build.
+This repo is the **React + TypeScript frontend** (Vite) that talks to a FastAPI backend deployed at `https://vinylog.onrender.com`. `src/backend/templates/` contains Jinja2 templates kept for reference — not part of the Vite build.
 
 ## Commands
 
 ```bash
-npm run dev          # start Vite dev server (proxies /api/* to localhost:8000)
+npm run dev          # start Vite dev server (proxies /api/* to vinylog.onrender.com)
 npm run build        # type-check + production build
 npm run lint         # ESLint
 npm run typecheck    # tsc without emit
@@ -38,12 +38,10 @@ Two separate layers — chosen to keep identity concerns out of Redux and avoid 
 
 **`AuthContext`** (`src/context/AuthContext.tsx`) — identity only, backed by `useReducer`
 - Owns: current user object, auth token, login/signup/logout, follow/unfollow
-- Why context: auth state is global and read-only from most components; no need for Redux's action history
 - `status: 'loading' | 'authed' | 'anon'`
 
 **Redux Toolkit** (`src/store.ts` + `src/store/`) — current user's *mutable* data
 - Owns: the user's lists, reviews, favourite albums — data that must survive navigation and update reactively
-- Why Redux: multiple pages read the same lists/reviews; mutations (create/delete) must reflect everywhere instantly without re-fetching
 - Store file: `src/store.ts`
 - Typed hooks: `src/hooks/hooks.ts` → `useAppSelector`, `useAppDispatch`
 
@@ -60,20 +58,14 @@ Provider nesting in `main.tsx`:
 ```ts
 // src/store.ts
 export type RootState = {
-  lists: {
-    items: ListOut[];        // current user's lists
-  };
-  reviews: {
-    items: ReviewOut[];      // current user's reviews
-  };
-  users: {
-    favouriteAlbums: AlbumOut[];  // current user's favourite albums
-  };
+  lists:   { items: ListOut[] };          // current user's lists
+  reviews: { items: ReviewOut[] };        // current user's reviews
+  users:   { favouriteAlbums: AlbumOut[] }; // current user's favourite albums
 };
 ```
 
 Thunks per slice (`src/store/`):
-- `listsSlice`: `fetchMyLists`, `createList`, `deleteList`, `addAlbumToList`, `removeAlbumFromList`
+- `listsSlice`: `fetchMyLists`, `createList`, `updateList`, `deleteList`, `addAlbumToList`, `removeAlbumFromList`
 - `reviewsSlice`: `fetchReviews`, `createReview`, `updateReview`, `deleteReview`
 - `usersSlice`: `fetchFavouriteAlbums`, `saveFavouriteAlbums`
 
@@ -83,25 +75,72 @@ All backend communication lives in `src/api/`, split by domain:
 
 ```
 src/api/
-  http.ts      — fetch primitives: get<T>, mutateJSON<T>, mutateVoid, authHeaders, setAuthToken, UnauthorizedError
-  auth.ts      — login, signup, getMe, logout
-  users.ts     — getCurrentUser, updateUser, uploadAvatar, getFavouriteAlbums, updateFavouriteAlbums, followUser, unfollowUser
-  albums.ts    — getAllAlbums, getAlbumDetails, getFeaturedAlbums, getPopularAlbums, searchAlbums, getAlbumTracks
-  artists.ts   — getArtists
-  lists.ts     — getLists, getMyLists, getUserLists, createList, updateList, deleteList
-  reviews.ts   — getReview, getReviews, createReview, updateReview, deleteReview
-  search.ts    — search(q)
-  index.ts     — assembles all domain objects into a single `api` export
+  http.ts       — fetch primitives: get<T>, mutateJSON<T>, mutateVoid, mutateFormData<T>,
+                  authHeaders, setAuthToken, UnauthorizedError
+  auth.ts       — login, signup, getMe, logout
+  users.ts      — getCurrentUser, updateUser, uploadAvatar, getFavouriteAlbums,
+                  updateFavouriteAlbums, followUser, unfollowUser
+  albums.ts     — getAllAlbums, getAlbumDetails, getAlbumBySpotifyId, getTrendingAlbums,
+                  getFeaturedAlbums, getFeedAlbums, searchAlbums, getAlbumTracks
+  artists.ts    — getArtists, getArtistsDetails, getSpotifyArtist
+  lists.ts      — getLists, getMyLists, getUserLists, createList, updateList, deleteList
+  reviews.ts    — getReview, getReviews, createReview, updateReview, deleteReview
+  search.ts     — search(q)
+  recommend.ts  — generateRecommendation
+  index.ts      — assembles all domain objects into a single `api` export
 ```
 
 **Rules:**
 - Import as `import { api } from "../../api"` — never import from individual domain files
-- All paths must include a trailing slash to avoid FastAPI 307 redirects that drop the `Authorization` header (e.g. `/reviews/` not `/reviews`)
 - `setAuthToken(token)` writes a module-level variable; `authHeaders()` injects it on every request
 - On 401, `http.ts` throws `UnauthorizedError` — `AuthContext` catches this and logs out
 - No `axios`, no TanStack Query — native `fetch` via the primitives in `http.ts`
 
-## 5. File Structure
+**Trailing slash rule** — applies only to top-level collection endpoints that FastAPI redirects (e.g. `/albums/`, `/reviews/`, `/lists/`). Sub-resource paths do **not** use trailing slashes (e.g. `/albums/details/${id}`, `/albums/trending`, `/artists/spotify/${id}`). Adding a trailing slash to a sub-resource path that the backend doesn't define will cause a 404.
+
+### services/
+
+`src/services/` is the Project-5-required public interface — three thin re-export files:
+- `src/services/api.ts` — re-exports `api`, `setAuthToken`, `UnauthorizedError` from `src/api/`
+- `src/services/auth.ts` — re-exports `api` as `authService`
+- `src/services/backend-config.ts` — exports `BACKEND_BASE_URL` constant
+
+Internal code continues to import from `src/api/`; `src/services/` exists for rubric compliance.
+
+## 5. Key Patterns
+
+### Trending / Spotify ID resolution
+
+The `/albums/trending` endpoint returns a lightweight `TrendingAlbumOut` shape — no numeric `id`, flat `artist_name` string, no nested `artist` object. Clicking a trending album navigates to `/albums/${spotify_id}`. `AlbumDetail` detects a non-numeric URL param and calls `GET /albums/spotify/${spotifyId}` first, which looks up or creates the album in the DB and returns its numeric `id`, then redirects to `/albums/${numericId}`.
+
+### Artist Spotify sync
+
+When `ArtistDetail` loads, `useArtistDetail` fetches `getArtistsDetails(id)`. If the artist has a `spotify_id` **and no albums yet** (`albums.length === 0`), it calls `getSpotifyArtist(spotify_id)` to sync albums from Spotify, then re-fetches. The "only when empty" guard is critical — re-syncing reassigns DB IDs and breaks existing reviews and lists.
+
+### Profile data refresh
+
+`useProfileData(username)` returns a `refresh()` function that re-fetches the public user profile. After `followUser` / `unfollowUser` (context), call `await refresh()` — do not call `api.getCurrentUser()` directly in the page component.
+
+### AlbumCard accepts AlbumCardData
+
+`AlbumCard` accepts `AlbumCardData` (not `AlbumOut`) — a minimal interface satisfied by both `AlbumOut` and `TrendingAlbumOut`. It resolves the artist display as `album.artist?.name ?? album.artist_name` and the link target as `album.id ?? album.spotify_id`. `AlbumCarousel` likewise accepts `AlbumCardData[]`.
+
+## 6. Types of Note
+
+```ts
+// src/types/album.ts
+TrendingAlbumOut   // shape returned by /albums/trending: {spotify_id, title, artist_name, cover_url, release_date}
+SpotifyAlbumLookup // shape returned by /albums/spotify/{id}: {id, title, spotify_id, cover_url, release_date}
+AlbumCardData      // common interface for AlbumCard: satisfies both AlbumOut and TrendingAlbumOut
+
+// src/types/recommend.ts
+RecommendRequest   // {user_input?: string | null}
+RecommendResponse  // {artist_name, album_title, reason, original_prompt, album_id?, spotify_id?, cover_url?}
+```
+
+All types are re-exported from `src/types/index.ts`.
+
+## 7. File Structure
 
 ```
 src/
@@ -118,29 +157,32 @@ src/
 │   ├── StarRatingField/
 │   └── Button.tsx, FormField.tsx, AppLayout.tsx, AlbumCard.tsx, ArtistCard.tsx …
 ├── pages/            One folder per route
-│   ├── Home/         Home.tsx + co-located HomeHero.tsx, HomePanels.tsx …
+│   ├── Home/
 │   ├── Albums/
 │   ├── AlbumDetail/
+│   ├── ArtistDetail/
 │   ├── Profile/
 │   ├── Reviews/
 │   ├── ReviewDetail/
 │   ├── CreateReview/
+│   ├── EditReview/
 │   ├── Settings/
 │   ├── Lists/
 │   ├── Search/
-│   └── Auth/         Login.tsx, Signup.tsx, Auth.css
+│   ├── Recommend/
+│   └── Auth/
 ├── App.tsx           Route definitions + ProtectedRoute
 └── main.tsx          Provider nesting + app entry point
 ```
 
 **Naming patterns:**
 - Page shell: `PageName.tsx` (default export)
-- Co-located sub-components: `PageNameSection.tsx` / `PageNameCard.tsx` (named exports)
+- Co-located sub-components: separate files in the same folder (named exports) — never define multiple components in one file
 - Shared components: `ComponentName.tsx` or `ComponentName/ComponentName.tsx`
 - Slices: `domainSlice.ts`, reducer export: `domainReducer`
 - Types: `src/types/domain.ts`, one interface per concept
 
-## 6. Adding New Features
+## 8. Adding New Features
 
 Follow these steps in order when adding any new operation (e.g. "bookmark an album"):
 
@@ -186,17 +228,11 @@ const bookmarksSlice = createSlice({
 export const bookmarksReducer = bookmarksSlice.reducer;
 ```
 
-Register in `src/store.ts`:
-```ts
-import { bookmarksReducer } from "./store/bookmarksSlice";
-export const store = configureStore({ reducer: { ..., bookmarks: bookmarksReducer } });
-```
-
-Dispatch initial fetch in `AppDataLoader` (`src/context/AppStateContext.tsx`) when `status === 'authed'`.
+Register in `src/store.ts` and dispatch initial fetch in `AppDataLoader`.
 
 ### Step 4 — Skip Redux for read-only / page-local data
 
-If the data doesn't need to survive navigation (e.g. album search results, public artist list), use a domain hook instead:
+If the data doesn't need to survive navigation, use a domain hook:
 ```ts
 // src/hooks/useBookmarks.ts
 export function useBookmarks(userId: number) {
@@ -206,7 +242,7 @@ export function useBookmarks(userId: number) {
 
 ### Step 5 — Build the UI
 
-- Add a new page folder `src/pages/Bookmarks/` with `Bookmarks.tsx` (thin shell) + co-located sub-components
+- Add `src/pages/Bookmarks/Bookmarks.tsx` (thin shell) + co-located sub-components in separate files
 - Page shell pattern:
   ```tsx
   export default function Bookmarks() {
@@ -236,6 +272,7 @@ npm run verify   # typecheck + lint + test must all pass
 - **All form fields** → wrapped in `<FormField label="..." htmlFor="...">`
 - **All pages** → compose `<AppLayout>` themselves (never at router level)
 - **CSS** → co-located `.css` file per page/component; global base in `src/index.css`
+- **One component per file** — co-located sub-components go in their own file, even if small
 
 ## Testing
 

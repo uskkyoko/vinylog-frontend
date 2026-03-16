@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
-import type { AlbumOut } from "../types";
+import type { AlbumCardData } from "../types";
 
-export function AlbumCard({ album }: { album: AlbumOut }) {
+export function AlbumCard({ album }: { album: AlbumCardData }) {
+  const artistName = album.artist?.name ?? album.artist_name;
+  const to = `/albums/${album.spotify_id ?? album.id}`;
+
   return (
     <article className="album-card">
       <div className="album-card__image">
@@ -12,10 +15,10 @@ export function AlbumCard({ album }: { album: AlbumOut }) {
         />
       </div>
       <div className="album-card__info">
-        <p className="album-card__artist">{album.artist.name}</p>
+        <p className="album-card__artist">{artistName}</p>
         <h3 className="album-card__title">{album.title}</h3>
         <Link
-          to={`/albums/${album.id}`}
+          to={to}
           className="album-card__cta"
           aria-label={`View ${album.title}`}
         />

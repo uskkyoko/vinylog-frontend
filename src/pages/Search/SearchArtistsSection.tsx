@@ -1,4 +1,5 @@
 import type { SpotifyArtistResult } from "../../types";
+import { SearchResultsSection } from "./SearchResultsSection";
 
 function SearchArtistCard({ artist }: { artist: SpotifyArtistResult }) {
   return (
@@ -33,13 +34,10 @@ export function SearchArtistsSection({
 }) {
   if (artists.length === 0) return null;
   return (
-    <section className="search-results__section">
-      <h2 className="search-results__section-title">Artists</h2>
-      <div className="grid grid--four">
-        {artists.map((artist) => (
-          <SearchArtistCard key={artist.spotify_id} artist={artist} />
-        ))}
-      </div>
-    </section>
+    <SearchResultsSection title="Artists">
+      {artists.map((artist) => (
+        <SearchArtistCard key={artist.spotify_id} artist={artist} />
+      ))}
+    </SearchResultsSection>
   );
 }

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { ListOut, ListCreate, AlbumOut } from "../types";
+import type { ListOut, ListCreate, ListUpdate, AlbumOut } from "../types";
 import { api } from "../api";
 
 export const fetchMyLists = createAsyncThunk(
@@ -10,6 +10,12 @@ export const fetchMyLists = createAsyncThunk(
 export const createList = createAsyncThunk(
   "lists/create",
   (data: ListCreate): Promise<ListOut> => api.createList(data),
+);
+
+export const updateList = createAsyncThunk(
+  "lists/update",
+  ({ id, data }: { id: number; data: ListUpdate }): Promise<ListOut> =>
+    api.updateList(id, data),
 );
 
 export const deleteList = createAsyncThunk(
@@ -31,8 +37,18 @@ export const addAlbumToList = createAsyncThunk(
     currentAlbums: AlbumOut[];
     album: AlbumOut;
   }): Promise<ListOut | null> => {
-    if (currentAlbums.some((a) => a.id === album.id)) return null;
-    return api.updateList(listId, { albums: [...currentAlbums, album] });
+    // 1. Prevent duplicates
+    if (currentAlbums.some((a) => a.spotify_id === album.spotify_id))
+      return null;
+
+    // 2. Combine the old array with the newly selected album
+    const combinedAlbums = [...currentAlbums, album];
+
+    // 3. Extract JUST the string IDs for the backend
+    const albumIdsOnly = combinedAlbums.map((a) => a.spotify_id);
+
+    // 4. Send the updated payload structure
+    return api.updateList(listId, { album_ids: albumIdsOnly });
   },
 );
 
@@ -48,7 +64,9 @@ export const removeAlbumFromList = createAsyncThunk(
     albumId: number;
   }): Promise<ListOut> => {
     return api.updateList(listId, {
-      albums: currentAlbums.filter((a) => a.id !== albumId),
+      album_ids: currentAlbums
+        .filter((a) => a.id !== albumId)
+        .map((a) => a.spotify_id),
     });
   },
 );
@@ -64,6 +82,11 @@ const listsSlice = createSlice({
       })
       .addCase(createList.fulfilled, (state, action) => {
         state.items.push(action.payload);
+      })
+      .addCase(updateList.fulfilled, (state, action) => {
+        state.items = state.items.map((l) =>
+          l.id === action.payload.id ? action.payload : l,
+        );
       })
       .addCase(deleteList.fulfilled, (state, action) => {
         state.items = state.items.filter((l) => l.id !== action.payload);

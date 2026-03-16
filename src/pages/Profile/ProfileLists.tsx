@@ -1,7 +1,14 @@
 import { ButtonLink } from "../../components/Button";
+import { AlbumPreviews } from "../Lists/ListCard";
 import type { ListOut } from "../../types";
 
-export function ProfileLists({ lists }: { lists: ListOut[] }) {
+export function ProfileLists({
+  lists,
+  isOwner = true,
+}: {
+  lists: ListOut[];
+  isOwner?: boolean;
+}) {
   return (
     <section className="profile-section">
       <header className="profile-section__header">
@@ -9,9 +16,11 @@ export function ProfileLists({ lists }: { lists: ListOut[] }) {
           <p className="eyebrow">Lists Shelf</p>
           <h2 className="profile-section__title">Currently on rotation</h2>
         </div>
-        <ButtonLink to="/lists/new" variant="ghost" size="sm">
-          Add list
-        </ButtonLink>
+        {isOwner && (
+          <ButtonLink to="/lists/new" variant="ghost" size="sm">
+            Add list
+          </ButtonLink>
+        )}
       </header>
       <div className="profile-lists">
         {lists.length === 0 ? (
@@ -34,6 +43,7 @@ function ProfileListCard({ list }: { list: ListOut }) {
         {list.description && (
           <p className="profile-lists__meta">{list.description}</p>
         )}
+        <AlbumPreviews albums={list.albums} />
       </div>
       <ButtonLink to={`/lists/${list.id}`} variant="ghost" size="sm">
         View

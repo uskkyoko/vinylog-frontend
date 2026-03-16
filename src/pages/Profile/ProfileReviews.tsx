@@ -6,11 +6,16 @@ import type { ReviewOut } from "../../types";
 export function ProfileReviews({
   reviews,
   username,
+  isOwner = true,
 }: {
   reviews: ReviewOut[];
   username: string;
+  isOwner?: boolean;
 }) {
-  const recentReviews = useMemo(() => reviews.slice(0, 3), [reviews]);
+  const displayedReviews = useMemo(
+    () => (isOwner ? reviews.slice(0, 3) : reviews),
+    [reviews, isOwner],
+  );
 
   return (
     <section className="profile-section">
@@ -19,13 +24,15 @@ export function ProfileReviews({
           <p className="eyebrow">Activity</p>
           <h2 className="profile-section__title">Recent reviews</h2>
         </div>
-        <ButtonLink to="/reviews/new" variant="ghost" size="sm">
-          Add review
-        </ButtonLink>
+        {isOwner && (
+          <ButtonLink to="/reviews/new" variant="ghost" size="sm">
+            Add review
+          </ButtonLink>
+        )}
       </header>
       <div className="profile-reviews">
-        {recentReviews.length > 0 ? (
-          recentReviews.map((review) => (
+        {displayedReviews.length > 0 ? (
+          displayedReviews.map((review) => (
             <ReviewCard
               key={review.id}
               review={review}
@@ -37,7 +44,7 @@ export function ProfileReviews({
             <p>No reviews yet.</p>
           </div>
         )}
-        {reviews.length > 3 && (
+        {isOwner && reviews.length > 3 && (
           <ButtonLink to="/reviews" variant="ghost" size="sm">
             View all {reviews.length} reviews
           </ButtonLink>
@@ -46,4 +53,3 @@ export function ProfileReviews({
     </section>
   );
 }
-

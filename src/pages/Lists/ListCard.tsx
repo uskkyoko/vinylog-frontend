@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ButtonLink } from "../../components/Button";
 import type { ListOut } from "../../types";
 
-function AlbumPreviews({ albums }: { albums: ListOut["albums"] }) {
+export function AlbumPreviews({ albums }: { albums: ListOut["albums"] }) {
   const albumCount = albums?.length ?? 0;
   if (albumCount === 0) {
     return (
@@ -17,7 +17,7 @@ function AlbumPreviews({ albums }: { albums: ListOut["albums"] }) {
         {albums.slice(0, 4).map((album) => (
           <Link
             key={album.id}
-            to={`/albums/${album.id}`}
+            to={`/albums/${album.spotify_id}`}
             className="list-card__preview-item"
           >
             <img

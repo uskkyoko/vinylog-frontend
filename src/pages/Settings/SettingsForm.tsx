@@ -25,7 +25,7 @@ function userFavToFavAlbum(
   return {
     spotify_id: album.spotify_id,
     title: album.title,
-    artist_name: album.artist.name,
+    artist_name: album.artist?.name ?? "",
     cover_url: album.cover_url,
   };
 }

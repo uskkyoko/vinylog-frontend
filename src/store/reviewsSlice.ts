@@ -40,7 +40,9 @@ const reviewsSlice = createSlice({
       })
       .addCase(updateReview.fulfilled, (state, action) => {
         state.items = state.items.map((r) =>
-          r.id === action.payload.id ? action.payload : r,
+          r.id === action.payload.id
+            ? { ...r, ...action.payload, album: action.payload.album ?? r.album, user: action.payload.user ?? r.user }
+            : r,
         );
       })
       .addCase(deleteReview.fulfilled, (state, action) => {

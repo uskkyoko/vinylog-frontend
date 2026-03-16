@@ -1,5 +1,9 @@
 import "./Albums.css";
-import { useAlbums, usePopularAlbums } from "../../hooks/useAlbums";
+import {
+  useAlbums,
+  useFeedAlbums,
+  useTrendingAlbums,
+} from "../../hooks/useAlbums";
 import { AppLayout } from "../../components/AppLayout";
 import { PageLoading } from "../../components/PageLoading";
 import { AlbumsIntro } from "./AlbumsIntro";
@@ -7,7 +11,8 @@ import { AlbumCarousel } from "./AlbumCarousel";
 
 export default function Albums() {
   const { data: allAlbums, loading } = useAlbums();
-  const { data: popularAlbums } = usePopularAlbums();
+  const { data: feedAlbums } = useFeedAlbums();
+  const { data: trendingAlbums } = useTrendingAlbums();
 
   if (loading || !allAlbums) return <PageLoading />;
 
@@ -16,8 +21,9 @@ export default function Albums() {
       <section className="albums-page">
         <div className="container">
           <AlbumsIntro />
-          <AlbumCarousel title="Popular Albums" albums={popularAlbums} />
-          <AlbumCarousel title="All Albums" albums={allAlbums} />
+          <AlbumCarousel title="Popular with Friends" albums={feedAlbums} />
+          <AlbumCarousel title="Trending" albums={trendingAlbums} />
+          <AlbumCarousel title="Recommended" albums={allAlbums} />
         </div>
       </section>
     </AppLayout>

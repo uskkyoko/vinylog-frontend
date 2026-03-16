@@ -28,7 +28,7 @@ export function HomePanels({
                 key={album.id}
                 primary={album.title}
                 meta={`${album.artist?.name || "Unknown artist"} · ${album.release_date}`}
-                to={`/albums/${album.id}`}
+                to={`/albums/${album.spotify_id}`}
               />
             ))}
           </HomePanel>

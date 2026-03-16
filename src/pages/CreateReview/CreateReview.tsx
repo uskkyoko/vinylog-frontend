@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router-dom";
+import "../Reviews/Review.css";
 import { AppLayout } from "../../components/AppLayout";
 import { ReviewForm } from "./ReviewForm";
 

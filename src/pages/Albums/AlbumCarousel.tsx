@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { AlbumOut } from "../../types";
+import type { AlbumCardData } from "../../types";
 import { AlbumCard } from "../../components/AlbumCard";
 import { Button } from "../../components/Button";
 
@@ -8,7 +8,7 @@ export function AlbumCarousel({
   albums,
 }: {
   title: string;
-  albums: AlbumOut[];
+  albums: AlbumCardData[];
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +45,7 @@ export function AlbumCarousel({
         <div className="albums-carousel__viewport" ref={viewportRef}>
           <div className="albums-carousel__track">
             {albums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
+              <AlbumCard key={album.id ?? album.spotify_id} album={album} />
             ))}
           </div>
         </div>

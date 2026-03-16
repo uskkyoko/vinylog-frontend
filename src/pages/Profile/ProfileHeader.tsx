@@ -1,14 +1,28 @@
-import { useMemo } from "react";
-import { ButtonLink } from "../../components/Button";
+import { useState } from "react";
+import { Button, ButtonLink } from "../../components/Button";
 import type { UserOut, AlbumOut } from "../../types";
+import { FollowModal } from "./FollowModal";
+import { FavouriteAlbums } from "./FavouriteAlbums";
 
 export function ProfileHeader({
   user,
   favouriteAlbums,
+  isOwner = true,
+  isFollowing,
+  onFollow,
+  onUnfollow,
 }: {
   user: UserOut;
   favouriteAlbums: AlbumOut[];
+  isOwner?: boolean;
+  isFollowing?: boolean;
+  onFollow?: () => void;
+  onUnfollow?: () => void;
 }) {
+  const [openModal, setOpenModal] = useState<"followers" | "following" | null>(
+    null,
+  );
+
   return (
     <div className="card profile__header">
       <div className="profile__head-row">
@@ -29,46 +43,50 @@ export function ProfileHeader({
           </div>
         </div>
         <div className="profile__actions">
-          <ButtonLink to="/settings" variant="ghost">
-            Edit Profile
-          </ButtonLink>
+          {isOwner ? (
+            <ButtonLink to="/settings" variant="ghost">
+              Edit Profile
+            </ButtonLink>
+          ) : onFollow ? (
+            <Button
+              variant={isFollowing ? "ghost" : "primary"}
+              onClick={isFollowing ? onUnfollow : onFollow}
+            >
+              {isFollowing ? "Unfollow" : "Follow"}
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      <ul className="stats">
+        <li>
+          <button
+            className="stats__btn"
+            onClick={() => setOpenModal("followers")}
+          >
+            <span>{user.followers_count ?? 0}</span>
+            Followers
+          </button>
+        </li>
+        <li>
+          <button
+            className="stats__btn"
+            onClick={() => setOpenModal("following")}
+          >
+            <span>{user.following_count ?? 0}</span>
+            Following
+          </button>
+        </li>
+      </ul>
 
       <FavouriteAlbums albums={favouriteAlbums} />
-    </div>
-  );
-}
 
-function FavouriteAlbums({ albums }: { albums: AlbumOut[] }) {
-  const displayAlbums = useMemo(() => albums.slice(0, 8), [albums]);
-
-  return (
-    <div className="profile__favorites">
-      <div className="profile__favorites-header">
-        <p className="eyebrow">Favourites</p>
-        {albums.length > 0 && (
-          <span className="profile__favorites-count">
-            {albums.length} picks
-          </span>
-        )}
-      </div>
-      {displayAlbums.length > 0 ? (
-        <div className="profile__favorites-grid">
-          {displayAlbums.map((album) => (
-            <div key={album.id} className="profile__favorite">
-              <img
-                src={album.cover_url ?? ""}
-                alt={album.title}
-                className="profile__favorite-cover"
-              />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="profile__favorites-empty">
-          Add favourite albums to see art highlights here.
-        </p>
+      {openModal && (
+        <FollowModal
+          username={user.username}
+          kind={openModal}
+          onClose={() => setOpenModal(null)}
+        />
       )}
     </div>
   );

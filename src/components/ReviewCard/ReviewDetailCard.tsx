@@ -8,13 +8,17 @@ interface ReviewDetailCardProps {
   onDelete?: () => void;
 }
 
-export function ReviewDetailCard({ review, isOwner, onDelete }: ReviewDetailCardProps) {
+export function ReviewDetailCard({
+  review,
+  isOwner,
+  onDelete,
+}: ReviewDetailCardProps) {
   return (
     <article className="review-view__card">
       <div className="review-view__layout">
         <div className="review-view__album">
           <Link
-            to={`/albums/${review.album.id}`}
+            to={`/albums/${review.album.spotify_id}`}
             className="review-view__album-link"
           >
             <img
@@ -25,13 +29,22 @@ export function ReviewDetailCard({ review, isOwner, onDelete }: ReviewDetailCard
           </Link>
           <p className="eyebrow">Album</p>
           <h2 className="review-view__album-title">{review.album.title}</h2>
-          <p className="review-view__album-artist">{review.album.artist.name}</p>
+          {review.album.artist && (
+            <p className="review-view__album-artist">
+              <Link
+                to={`/artists/${review.album.artist.id}`}
+                className="review-view__album-artist"
+              >
+                {review.album.artist.name}
+              </Link>
+            </p>
+          )}
         </div>
 
         <div className="review-view__content">
           <div className="review-view__meta">
             <div className="review-view__user">
-              {review.user.profile_picture && (
+              {review.user?.profile_picture && (
                 <img
                   src={review.user.profile_picture}
                   alt={review.user.username}
@@ -40,10 +53,10 @@ export function ReviewDetailCard({ review, isOwner, onDelete }: ReviewDetailCard
               )}
               <div>
                 <Link
-                  to={`/users/${review.user.username}`}
+                  to={`/profile/${review.user?.username}`}
                   className="review-view__username"
                 >
-                  {review.user.username}
+                  {review.user?.username}
                 </Link>
                 <span className="review-view__date">
                   reviewed on{" "}
@@ -86,7 +99,11 @@ export function ReviewDetailCard({ review, isOwner, onDelete }: ReviewDetailCard
 
           {isOwner && (
             <div className="review-view__actions">
-              <ButtonLink to={`/reviews/${review.id}/edit`} variant="ghost" size="sm">
+              <ButtonLink
+                to={`/reviews/${review.id}/edit`}
+                variant="ghost"
+                size="sm"
+              >
                 Edit Review
               </ButtonLink>
               <Button variant="danger" size="sm" onClick={onDelete}>

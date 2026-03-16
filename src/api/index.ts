@@ -7,6 +7,7 @@ import { albumsApi } from "./albums";
 import { artistsApi } from "./artists";
 import { listsApi } from "./lists";
 import { searchApi } from "./search";
+import { recommendApi } from "./recommend";
 
 export const api = {
   ...authApi,
@@ -16,4 +17,5 @@ export const api = {
   ...artistsApi,
   ...listsApi,
   ...searchApi,
+  ...recommendApi,
 };

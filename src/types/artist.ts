@@ -23,3 +23,24 @@ export interface ArtistOut {
   archived: boolean;
   albums: AlbumOut[];
 }
+
+export interface ArtistAlbumSummary {
+  id: number;
+  title: string;
+  spotify_id: string;
+  cover_url: string | null;
+  release_date: string;
+  review_count: number;
+  average_rating: number | null;
+}
+
+export interface ArtistDetails {
+  id: number;
+  name: string;
+  biography: string | null;
+  profile_picture: string | null;
+  spotify_id: string | null;
+  average_rating: number | null;
+  total_reviews: number;
+  albums: ArtistAlbumSummary[];
+}

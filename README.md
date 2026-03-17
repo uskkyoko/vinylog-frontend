@@ -1,91 +1,154 @@
 # Vinylog
 
-Vinylog is a music discovery and review platform built with React + TypeScript. Users log in, write album reviews, curate lists, follow other users, and get AI-powered recommendations.
+A music discovery and review platform. Browse albums and artists sourced from Spotify, write reviews, curate lists, follow other users, and get AI-powered album recommendations.
 
-## Tech Stack
-
-- **Framework:** React 18 + Vite
-- **Language:** TypeScript
-- **Testing:** Vitest + React Testing Library
-- **Routing:** React Router DOM
-- **State:** Redux Toolkit + AuthContext
-- **Styling:** CSS3 (component-scoped)
+**Live backend:** `https://vinylog.onrender.com`
 
 ---
 
-## Project 3: Custom Hook (`useFetch`)
-
-The core of the application's data layer is the `useFetch` hook. This utility abstracts the complexity of asynchronous side effects and state management into a reusable, type-safe interface.
-
-[Image of a sequence diagram showing a React component, a custom hook, and an API service with state transitions for loading, data, and error]
-
-### Hook Operations
-
-1. **State Orchestration** — Manages `data`, `loading`, and `error` states simultaneously to provide a consistent UI feedback loop.
-2. **Auto-Execution** — Triggers the provided `fetcher` function automatically on mount, abstracting `useEffect` boilerplate away from the UI.
-3. **Dependency Synchronization** — Monitors a `dependencies` array to intelligently re-fetch data only when specific external values change.
-4. **Memory Leak Prevention** — Implements a cleanup phase using an `isMounted` flag to prevent state updates on unmounted components, effectively handling race conditions.
-5. **Manual State Override** — Exposes a `setData` function, allowing the UI to perform "optimistic updates" or manual state overrides without a server round-trip.
-
----
-
-## Testing Suite
-
-Consistency is verified using **Vitest** and **React Testing Library**. The suite ensures the hook behaves predictably under various network conditions.
-
-### Running Tests
-
-To run the automated test suite, execute the following:
-
-```bash
-npm install
-npm run test
-```
-
----
-
-## Project 5
-
-### Backend
-
-Custom FastAPI deployed on Render: `https://vinylog.onrender.com`
-
-Rationale: the backend was built for this course alongside the frontend. No Firebase or Supabase dependency — all endpoints are JWT-protected REST routes with a PostgreSQL database.
-
-### Auth
-
-- JWT email/password via `AuthContext` (`src/context/AuthContext.tsx`)
-- `getMe` called on mount — session survives page reload via `localStorage` token
-- `ProtectedRoute` component redirects unauthenticated users to `/login`
-- Logout available in Settings
-
-### Run Instructions
+## Getting Started
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Feature Verification
+The dev server proxies `/api/*` requests to the backend automatically.
+
+---
+
+## Features
+
+| Page | Route | Auth required |
+|---|---|---|
+| Home | `/` | Yes |
+| Albums | `/albums` | No |
+| Album detail | `/albums/:id` | No |
+| Artist detail | `/artists/:id` | No |
+| Search | `/search` | No |
+| Lists | `/lists` | No |
+| List detail | `/lists/:id` | No |
+| Create / Edit list | `/lists/new`, `/lists/:id/edit` | Yes |
+| Reviews | `/reviews` | Yes |
+| Review detail | `/reviews/:id` | Yes |
+| Create / Edit review | `/reviews/new`, `/reviews/:id/edit` | Yes |
+| AI Recommend | `/recommend` | Yes |
+| Profile | `/profile/:username` | No |
+| Settings | `/settings` | Yes |
+| About | `/about` | No |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React 18 + Vite |
+| Language | TypeScript |
+| Routing | React Router DOM v6 |
+| Global state | Redux Toolkit |
+| Auth state | React Context + `useReducer` |
+| Styling | CSS3, component-scoped files |
+| Testing | Vitest + React Testing Library |
+| Backend | Custom FastAPI on Render |
+| Music data | Spotify Web API (via backend) |
+
+---
+
+## Architecture
+
+### State management
+
+Two separate layers:
+
+- **`AuthContext`** (`src/context/AuthContext.tsx`) — identity only. Owns the current user, JWT token, login / signup / logout, follow / unfollow. Status: `loading | authed | anon`.
+- **Redux Toolkit** (`src/store/`) — the current user's mutable data: lists, reviews, favourite albums. Survives navigation and updates reactively.
+- **`AppDataLoader`** (`src/context/AppStateContext.tsx`) — bridges auth to Redux. When auth becomes `authed`, dispatches the three initial fetch thunks.
+
+### Data fetching
+
+All read-only / page-local data goes through `useFetch` (`src/hooks/useFetch.ts`) — a generic hook that manages `data`, `loading`, and `error` state, handles async cancellation with an `isMounted` flag, and re-fetches when a dependency array changes.
+
+All backend calls are centralised in `src/api/`, one file per domain (`albums.ts`, `artists.ts`, `lists.ts`, `reviews.ts`, `users.ts`, `search.ts`, `recommend.ts`). Assembled into a single `api` object via `src/api/index.ts`.
+
+### Routing
+
+Protected routes are wrapped in `<ProtectedRoute>`, which redirects unauthenticated users to `/login`. Album links always navigate by `spotify_id`; `AlbumDetail` resolves it to a numeric DB id via `GET /albums/spotify/{id}` and then redirects — this keeps navigation stable even when DB ids shift after a Spotify sync.
+
+---
+
+## Commands
+
+```bash
+npm run dev          # Vite dev server
+npm run build        # Type-check + production build
+npm run typecheck    # tsc without emit
+npm run lint         # ESLint
+npm run test         # Vitest (single run)
+npm run test:watch   # Vitest (watch)
+npm run verify       # typecheck + lint + test
+```
+
+---
+
+## Project 3 — Custom Hook (`useFetch`)
+
+The core of the data layer is `useFetch`. It abstracts asynchronous side effects into a reusable, type-safe interface.
+
+1. **State orchestration** — manages `data`, `loading`, and `error` simultaneously.
+2. **Auto-execution** — triggers the fetcher on mount, removing `useEffect` boilerplate from components.
+3. **Dependency synchronisation** — re-fetches only when the dependency array changes.
+4. **Memory-leak prevention** — uses an `isMounted` flag to cancel state updates on unmounted components.
+5. **Manual override** — exposes `setData` for optimistic updates without a server round-trip.
+
+---
+
+## Project 5 — Backend Integration
+
+### Backend
+
+Custom FastAPI on Render (`https://vinylog.onrender.com`). No Firebase or Supabase — all endpoints are JWT-protected REST routes backed by a PostgreSQL database. Music data is synced from the Spotify Web API on demand.
+
+### Auth
+
+- JWT email/password via `AuthContext`
+- `getMe` called on app mount — session restored from `localStorage` token across page reloads
+- `ProtectedRoute` redirects unauthenticated users to `/login`
+- Logout available in Settings
+
+### Services layer
+
+`src/services/` is the assignment-required public interface — thin re-exports over `src/api/`:
+
+| File | Exports |
+|---|---|
+| `src/services/api.ts` | `api`, `setAuthToken`, `UnauthorizedError` |
+| `src/services/auth.ts` | `authService` (alias for `api`) |
+| `src/services/backend-config.ts` | `BACKEND_BASE_URL` |
+
+### Feature map
 
 | Feature | Hook / Service | `loading` | `error` |
 |---|---|---|---|
-| Albums (browse) | `useAlbums` | ✓ | ✓ |
+| Albums browse | `useAlbums` | ✓ | ✓ |
 | Album detail | `useFetch` in `AlbumDetail` | ✓ | ✓ |
 | Artists | `useArtistDetail` | ✓ | ✓ |
-| Lists (browse) | `useFetch` in `Lists` | ✓ | ✓ |
+| Lists browse | `useFetch` in `Lists` | ✓ | ✓ |
 | List detail | `useListDetail` | ✓ | ✓ |
 | Reviews | `reviewsSlice` (Redux) | ✓ | ✓ |
 | Review detail | `useFetch` in `ReviewDetail` | ✓ | ✓ |
-| Recommend | `api.generateRecommendation` | ✓ | ✓ |
+| AI Recommend | `api.generateRecommendation` | ✓ | ✓ |
 | Profile | `useProfileData` | ✓ | ✓ |
 | Search | `useFetch` in `Search` | ✓ | ✓ |
 | Settings | `usersSlice` (Redux) | ✓ | ✓ |
 
-### AI usage
+---
 
-1. Decomposition of styles
-2. Decomposition of component on the home page, etc
-3. Synchronization with the vinylog api
-4. Memory leak prevention for the custom hook
-5. Adapting existing pydantic schemas for types.ts to maintain the consistency with the api
+## AI Usage
+
+- Component decomposition (home page, styles)
+- Spotify API synchronisation with the backend
+- Memory-leak prevention for `useFetch`
+- Adapting Pydantic schemas to TypeScript types
+- Architecture review and refactoring (hook extraction, SLA fixes)
+- Claude Code used throughout for implementation

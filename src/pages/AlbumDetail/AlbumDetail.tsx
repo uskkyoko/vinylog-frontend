@@ -38,6 +38,17 @@ export default function AlbumDetail() {
     [numericId],
   );
 
+  // Pre-sync artist albums in the background so they are ready before the user navigates to the artist page
+  useEffect(() => {
+    const artistId = album?.artist?.id;
+    if (!artistId) return;
+    api.getArtistsDetails(artistId).then((artist) => {
+      if (artist.spotify_id && artist.albums.length === 0) {
+        api.getSpotifyArtist(artist.spotify_id).catch(() => {});
+      }
+    }).catch(() => {});
+  }, [album?.artist?.id]);
+
   if (resolveError) {
     return (
       <AppLayout>

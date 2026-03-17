@@ -30,6 +30,11 @@
   text-align: center;
   text-decoration: none;
   color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
   padding: 1rem;
   border-radius: 1rem;
   transition:

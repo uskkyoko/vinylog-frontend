@@ -7,6 +7,7 @@ function NavLinks() {
       <li><Link to="/albums" className="navbar__link">Albums</Link></li>
       <li><Link to="/lists" className="navbar__link">Lists</Link></li>
       <li><Link to="/profile" className="navbar__link">Profile</Link></li>
+      <li><Link to="/recommend" className="navbar__link navbar__link--primary">AI Recommend</Link></li>
     </>
   );
 }

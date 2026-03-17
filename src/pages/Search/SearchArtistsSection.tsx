@@ -1,13 +1,31 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { SpotifyArtistResult } from "../../types";
+import { api } from "../../api";
 import { SearchResultsSection } from "./SearchResultsSection";
 
 function SearchArtistCard({ artist }: { artist: SpotifyArtistResult }) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const result = await api.getSpotifyArtist(artist.spotify_id);
+      const data = result as { id: number };
+      navigate(`/artists/${data.id}`);
+    } catch {
+      setLoading(false);
+    }
+  }
+
   return (
-    <a
-      href={`https://open.spotify.com/artist/${artist.spotify_id}`}
-      target="_blank"
-      rel="noreferrer"
+    <button
+      type="button"
       className="search-results__artist-card"
+      onClick={handleClick}
+      disabled={loading}
     >
       {artist.image_url ? (
         <img
@@ -23,7 +41,7 @@ function SearchArtistCard({ artist }: { artist: SpotifyArtistResult }) {
         </div>
       )}
       <h3 className="search-results__artist-name">{artist.name}</h3>
-    </a>
+    </button>
   );
 }
 

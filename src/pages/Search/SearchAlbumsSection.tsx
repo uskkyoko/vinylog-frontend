@@ -1,12 +1,11 @@
+import { Link } from "react-router-dom";
 import type { SpotifyAlbumResult } from "../../types";
 import { SearchResultsSection } from "./SearchResultsSection";
 
 function SearchAlbumCard({ album }: { album: SpotifyAlbumResult }) {
   return (
-    <a
-      href={`https://open.spotify.com/album/${album.spotify_id}`}
-      target="_blank"
-      rel="noreferrer"
+    <Link
+      to={`/albums/${album.spotify_id}`}
       className="card-album"
     >
       <div className="card-album__image-wrapper">
@@ -20,7 +19,7 @@ function SearchAlbumCard({ album }: { album: SpotifyAlbumResult }) {
         <h3 className="card-album__title">{album.title}</h3>
         <p className="card-album__artist">{album.artist_name}</p>
       </div>
-    </a>
+    </Link>
   );
 }
 

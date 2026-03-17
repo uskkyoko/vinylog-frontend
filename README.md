@@ -116,15 +116,6 @@ Custom FastAPI on Render (`https://vinylog.onrender.com`). No Firebase or Supaba
 - `ProtectedRoute` redirects unauthenticated users to `/login`
 - Logout available in Settings
 
-### Services layer
-
-`src/services/` is the assignment-required public interface — thin re-exports over `src/api/`:
-
-| File | Exports |
-|---|---|
-| `src/services/api.ts` | `api`, `setAuthToken`, `UnauthorizedError` |
-| `src/services/auth.ts` | `authService` (alias for `api`) |
-| `src/services/backend-config.ts` | `BACKEND_BASE_URL` |
 
 ### Feature map
 

@@ -98,14 +98,6 @@ src/api/
 
 **Trailing slash rule** — applies only to top-level collection endpoints that FastAPI redirects (e.g. `/albums/`, `/reviews/`, `/lists/`). Sub-resource paths do **not** use trailing slashes (e.g. `/albums/details/${id}`, `/albums/trending`, `/artists/spotify/${id}`). Adding a trailing slash to a sub-resource path that the backend doesn't define will cause a 404.
 
-### services/
-
-`src/services/` is the Project-5-required public interface — three thin re-export files:
-- `src/services/api.ts` — re-exports `api`, `setAuthToken`, `UnauthorizedError` from `src/api/`
-- `src/services/auth.ts` — re-exports `api` as `authService`
-- `src/services/backend-config.ts` — exports `BACKEND_BASE_URL` constant
-
-Internal code continues to import from `src/api/`; `src/services/` exists for rubric compliance.
 
 ## 5. Key Patterns
 
